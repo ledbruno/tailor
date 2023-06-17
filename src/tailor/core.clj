@@ -14,7 +14,7 @@
   (slurp (:path snippet)))
 
 (defn code 
-  "Loads source code from the into a snippet
+  "Loads source code into a snippet
   Supported snippet types
   - :file -> loads the whole file
   - TODO! :file-chunk -> loads a piece of a file
@@ -27,7 +27,7 @@
 (defn- code-snippets [snippets]
   (map code snippets))
 
-(defn with-code [context-template]
+(defn- with-code [context-template]
   (update context-template :snippets code-snippets))
 
 (defn- snippet-and-desc [snippet]
@@ -42,7 +42,7 @@
   (assoc-in prompt-menu [key] (with-code template)))
 
 (defn prompt 
-  "Builds a promt string from the context provided"
+  "Builds a prompt string from the context provided"
   [context]
   (clojure.string/join "\n" [(:briefing context) (snippets (:snippets context)) (:task context) (:restrictions context)]))
 

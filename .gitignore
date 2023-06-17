@@ -17,3 +17,4 @@ pom.xml.asc
 /.lsp/.cache
 /.clj-kondo/rewrite-clj
 .clj-kondo/marick
+.clj-kondo/
