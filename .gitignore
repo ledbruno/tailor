@@ -12,3 +12,8 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
+.DS_Store
+/.clj-kondo/clj-kondo
+/.lsp/.cache
+/.clj-kondo/rewrite-clj
+.clj-kondo/marick
