@@ -1,6 +1,6 @@
 # tailor
 
-A Clojure library 
+A Clojure library that helps you create AI prompts for code automation tasks
 
 ## Usage
 
