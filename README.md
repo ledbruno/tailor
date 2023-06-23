@@ -2,8 +2,6 @@
 
 A Clojure library that helps you create AI prompts for code automation tasks
 
-## Concept
-
 ### Scrapers
 Prompts for code automation rely on code snippets and examples in order to respond completions properly.
 
@@ -24,7 +22,7 @@ Context: You are a code generator tool, that outputs clojure unit tests. Test Co
 Generate unit tests for the code mentioned above. Tests:
 ```
 
-The code snippet labeled as "Test Code" comes from a **scrapping** on some file of my project.
+The code snippet labeled as "Test Code" comes from a **scrapping** on a clojure sorce file.
 
 There are several different ways to scrape the code, take a look on our scrappers docs to know more.
 
