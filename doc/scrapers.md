@@ -1,15 +1,15 @@
 # Scrapers
 
-- File Scraper
+#### File Scraper
 Gets the source code of a whole file
 
-- Def Scraper
+#### Def Scraper
 Gets the source code of a def/defn 
 
-- DefInto Scraper
+#### DefInto Scraper
 Gets the source code of a def/defn and also used ones (go into)
 
-- DefReferences
+#### DefReferences Scraper
 Gets the source code of a def/defn and also code that references it. (find references)
 
 TODO: write [great documentation](http://jacobian.org/writing/what-to-write/)
