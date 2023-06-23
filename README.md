@@ -21,7 +21,7 @@ Context: You are a code generator tool, that outputs clojure unit tests. Test Co
 Generate unit tests for the code mentioned above. Tests:
 ```
 
-The code snippet labeled as "Test Code" comes from a **scrapping** on a clojure sorce file.
+The code snippet labeled as "Test Code" comes from a **Shearing** (cutting) on a Clojure source file.
 
 There are several different ways to get code snippets, take a look on our [shears docs](/doc/shears.md) to know more.
 
