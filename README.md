@@ -5,7 +5,7 @@ A Clojure library that helps you create AI prompts for code automation tasks
 ### Scrapers
 Prompts for code automation rely on code snippets and examples in order to respond completions properly.
 
-**Scrapers** are functions that cuts pieces of code from a single or multiple files, producing code snippets. 
+(Scrapers)[/doc/scrapers.md] are functions that cuts pieces of code from a single or multiple files, producing code snippets. 
 
 
 **E.g: a prompt for creating unit tests**
