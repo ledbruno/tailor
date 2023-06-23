@@ -16,8 +16,8 @@
 (defn cut [from to file-path]
   (when (and from to) (shell/sh "sed" "-n" (str from "," to "p") file-path)))
 
-(defn scrap [def-str file]
+(defn def-shear [def-str file]
   (let [def-found (first (find-var-def def-str file))]
     (:out (cut (:row def-found) (:end-row def-found) file))))
 
-(scrap "my-fn" "/tmp/foo.clj")
+(def-shear "my-fn" "/tmp/foo.clj")
