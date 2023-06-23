@@ -24,7 +24,7 @@ Generate unit tests for the code mentioned above. Tests:
 
 The code snippet labeled as "Test Code" comes from a **scrapping** on a clojure sorce file.
 
-There are several different ways to scrape the code, take a look on our scrappers docs to know more.
+There are several different ways to scrape the code, take a look on our [scrappers docs](/doc/scrapers.md) to know more.
 
 ### Prompt factory
 ::TODO
