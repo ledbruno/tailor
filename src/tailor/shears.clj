@@ -21,6 +21,7 @@
   (when (and from to) (shell/sh "sed" "-n" (str from "," to "p") file-path)))
 
 (defn- at-root
+  "Returns the first var def on the root level, considering only the first namespace declared"
   [{analysis :analysis matches :matches}]
   ;if more than one should throw an error?
   (let [ns (:name (first (:namespace-definitions analysis)))
@@ -29,6 +30,10 @@
     ;maybe map all, not only the first found
     (get (index-by :row matches) (first root-level-row-matches))))
 
-(defn shear-def-at-root [def-str file]
+(defn shear-def-at-root
+  "Returns the source code of the var defined at the root level
+   def-str : the name of the target var
+   file    : path to the clj source code file"
+  [def-str file]
   (let [def-found (at-root (find-var-defs def-str file))]
     (:out (cut (:row def-found) (:end-row def-found) file))))
