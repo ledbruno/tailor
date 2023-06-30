@@ -2,24 +2,32 @@
   (:require [clj-kondo.core :as clj-kondo]
             [clojure.java.shell :as shell]))
 
+(defn index-by [key-fn coll]
+  (into {} (map (juxt key-fn identity) coll)))
+
 (defn- var-named [var-name {var-defs :var-definitions}]
   (filter #(= var-name (:name %)) var-defs))
 
-#_(defn parent-def [var-name analysis]
-    (map #(find-var-defs (:from-var %) analysis) (filter #(= var-name (:name %)) (:var-usages analysis))))
-
 (defn- find-var-defs
-  [symbol-str file-path]
   "Returns a list of var defs with that matches the given symbol-str"
-  (var-named (symbol symbol-str) (:analysis (clj-kondo/run!
-                                             {:lint [file-path]
-                                              :config {:analysis true}}))))
+  [symbol-str file-path]
+  (let  [analysis (:analysis (clj-kondo/run!
+                              {:lint [file-path]
+                               :config {:analysis true}}))]
+    {:matches (var-named (symbol symbol-str) analysis)
+     :analysis analysis}))
 
 (defn- cut [from to file-path]
   (when (and from to) (shell/sh "sed" "-n" (str from "," to "p") file-path)))
 
-(defn- at-root [found-defs]
-  )
+(defn- at-root
+  [{analysis :analysis matches :matches}]
+  ;if more than one should throw an error?
+  (let [ns (:name (first (:namespace-definitions analysis)))
+        ns-root-level-forms (filter #(and (not (contains? % :from-var)) (= (:from %) ns)) (:var-usages analysis))
+        root-level-row-matches (clojure.set/intersection   (set (map :row ns-root-level-forms)) (set (map :row matches)))]
+    ;maybe map all, not only the first found
+    (get (index-by :row matches) (first root-level-row-matches))))
 
 (defn shear-def-at-root [def-str file]
   (let [def-found (at-root (find-var-defs def-str file))]
