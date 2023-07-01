@@ -20,17 +20,20 @@
 (defn- cut [from to file-path]
   (when (and from to) (shell/sh "sed" "-n" (str from "," to "p") file-path)))
 
-(defn- at-root
+(defn- analyzed-ns [which analysis]
+  (:name (which (:namespace-definitions analysis))))
+
+(defn at-root
   "Returns the first var def on the root level, considering only the first namespace declared"
   [{analysis :analysis matches :matches}]
   ;if more than one should throw an error?
-  (let [ns (:name (first (:namespace-definitions analysis)))
+  (let [ns (analyzed-ns first analysis)
         ns-root-level-forms (filter #(and (not (contains? % :from-var)) (= (:from %) ns)) (:var-usages analysis))
-        root-level-row-matches (clojure.set/intersection   (set (map :row ns-root-level-forms)) (set (map :row matches)))]
+        root-level-row-matches (clojure.set/intersection (set (map :row ns-root-level-forms)) (set (map :row matches)))]
     ;maybe map all, not only the first found
     (get (index-by :row matches) (first root-level-row-matches))))
 
-(defn shear-def-at-root
+(defn var-def-at-root
   "Returns the source code of the var defined at the root level
    def-str : the name of the target var
    file    : path to the clj source code file"
