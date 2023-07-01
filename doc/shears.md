@@ -1,15 +1,15 @@
 # Shears
 
 #### File Shears
-Gets the source code of a whole file
+TODO: Gets the source code of a whole file
 
-#### Def Shears
-Gets the source code of a def/defn 
+#### Shear def at root
+IN PROGRESS:: Gets the source code of a def/defn that are on the root level of a namespace
 
 #### DefInto Shears
-Gets the source code of a def/defn and also used ones (go into)
+TODO: Gets the source code of a def/defn and also used ones (go into)
 
 #### DefReferences Shears
-Gets the source code of a def/defn and also code that references it. (find references)
+TODO: Gets the source code of a def/defn and also code that references it. (find references)
 
 TODO: write [great documentation](http://jacobian.org/writing/what-to-write/)
