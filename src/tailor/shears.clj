@@ -2,7 +2,8 @@
   (:require
    [clj-kondo.core :as clj-kondo]
    [clojure.java.shell :as shell]
-   [clojure.set :as set]))
+   [clojure.set :as set]
+   [clojure.string :as string]))
 
 (defn index-by [key-fn coll]
   (into {} (map (juxt key-fn identity) coll)))
@@ -26,37 +27,65 @@
   (:name (which (:namespace-definitions analysis))))
 
 (defn top-level-forms
-  "Returns all top level forms, considering only the first namespace declared"
-  [analysis]
+  "Adds :top-level-forms to result, considering only the first namespace declared"
+  [result]
   ;if more than one should throw an error?
-  (let [ns (analyzed-ns first analysis)]
-    (filter #(and (not (contains? % :from-var)) (= (:from %) ns)) (:var-usages analysis))))
+  (let [analysis (:analysis result)
+        var-usages (:var-usages analysis)
+        ns (analyzed-ns first analysis)
+        top-level (filter #(and (not (contains? % :from-var)) (= (:from %) ns)) var-usages)]
+    (assoc result :top-level-forms top-level)))
 
 (defn rows [usages-or-defs]
   (set (map :row usages-or-defs)))
 
-(defn row-match
-  "Find vars that are declared on same row as top level forms. WARNING: brittle approach"
-  [matches top-level-forms]
-  (set/intersection (rows top-level-forms) (rows matches)))
+(defn matching-rows
+  "Adds :matching-rows to the result, which are top level rows that matches with target/matching var. WARNING: brittle approach"
+  [{:keys [matches top-level-forms] :as result}]
+  (assoc result :matching-rows (set/intersection (rows top-level-forms) (rows matches))))
 
-(defn mark [matches top-level-form-matches]
-  ;maybe map all, not only the first match
-  (get (index-by :row matches) (first top-level-form-matches)))
+(defn mark
+  "Mark organizes matches by index in order to make easier to cut/shear"
+  [{:keys [matches matching-rows]}]
+  ;maybe map all, not only the first matching row, other rows can have valid results
+  (get (index-by :row matches) (first matching-rows)))
 
 (defn shear [root-matches file-path]
   (:out (cut (:row root-matches) (:end-row root-matches) file-path)))
 
-(defn var-def-at-root
-  "Returns the source code of the var defined at the root level
+(defn shear-matches [result file]
+  (-> result
+      top-level-forms
+      matching-rows
+      mark
+      (shear file)))
+
+(defn shear-top-level
+  "Returns the source code of the top level var var defined in a given file
    def-str : the name of the target var
    file    : path to the clj source code file"
   [def-str file]
-  (let [result  (find-var-defs def-str file)
-        matches (:matches result)
-        def-found (mark matches (row-match matches (top-level-forms (:analysis result))))]
-    (shear def-found file)))
+  (-> (find-var-defs def-str file)
+      (shear-matches file)))
+
+(defn- usages
+  "Return a list of direct usages of a given var, with the :var-name and :file-path, so Tailor can shear it!
+  It stops to find usage when limit reachs 0/1"
+  [target-var file limit])
+
+(defn shear-usage [usage-to-shear]
+  (shear-top-level (:var-name usage-to-shear) (:file-path usage-to-shear)))
+
+(defn deep-shear [target-var file]
+  (let [top-level-src (shear-top-level target-var file)
+        usages-to-shear (usages target-var file 10) ; should return a list in order make conj work properly
+        usage-src (map shear-usage usages-to-shear)
+        all-src  (conj usage-src top-level-src)]
+    (string/join "\n" all-src)))
 
 (comment
   (defn cleanup [var-usage]
-    (assoc (select-keys var-usage [:ns :row :name :end-row]))))
+    (select-keys var-usage [:ns :row :name :end-row]))
+  (-> (find-var-defs "x" "./testResources/sample.clj")
+      top-level-forms
+      matching-rows))
