@@ -5,19 +5,26 @@
    [clojure.set :as set]
    [clojure.string :as string]))
 
-(defn index-by [key-fn coll]
-  (into {} (map (juxt key-fn identity) coll)))
+(defn index-by
+  ([key-fn coll]
+   (into {} (map (juxt key-fn identity) coll)))
+  ([key-fn coll keys-to-keep]
+   (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
 (defn- var-named [var-name {var-defs :var-definitions}]
-  (filter #(= var-name (:name %)) var-defs))
+  (filter #(= (symbol var-name) (:name %)) var-defs))
+
+(defn- from-var [var-name usages]
+  (filter #(= (symbol var-name) (:from-var %)) usages))
 
 (defn find-var-defs
   "Returns a list of var defs with that matches the given symbol-str"
   [symbol-str file-path]
   (let  [analysis (:analysis (clj-kondo/run!
                               {:lint [file-path]
+                               :skip-lint true
                                :config {:analysis true}}))]
-    {:matches (var-named (symbol symbol-str) analysis)
+    {:matches (var-named symbol-str analysis)
      :analysis analysis}))
 
 (defn- cut [from to file-path]
@@ -84,8 +91,41 @@
     (string/join "\n" all-src)))
 
 (comment
+
+  (def analysis (:analysis (clj-kondo/run!
+                            {:lint ["./testResources/deep/1/root.clj"
+                                    "./testResources/deep/1/other_ns.clj"
+                                    "./testResources/deep/1/another.clj"
+                                    "./testResources/deep/1/root_dependency.clj"]
+                             :skip-lint true
+                             :config {:analysis true}})))
+  (defn usage-info [var-usage]
+    (select-keys var-usage [:to :name :from :from-var]))
+
+  (def ns-map (index-by :name (:namespace-definitions analysis) [:name :filename]))
+
+  (def usages (map usage-info (:var-usages analysis)))
+
+  (def ns-matches (select-keys ns-map (map :to (from-var "my-fn" usages))))
+  (defn file-and-var [usage namespaces]
+    (let [match ((:to usage) namespaces)]
+      (when match (merge match (select-keys usage [:name])))))
+
+  (filter identity (map #(file-and-var % ns-matches) usages))
+
+  ; ({:name call-fn, :filename "./testResources/deep/1/other_ns.clj"}
+  ;  {:name another-fn, :filename "./testResources/deep/1/another.clj"}
+  ;  {:name just-for-root,
+  ;   :filename "./testResources/deep/1/root_dependency.clj"}
+  ;  {:name another-just,
+  ;   :filename "./testResources/deep/1/root_dependency.clj"}
+  ;  # is the last one expected?
+  ;  {:name child-call, :filename "./testResources/deep/1/another.clj"})
+
   (defn cleanup [var-usage]
     (select-keys var-usage [:ns :row :name :end-row]))
   (-> (find-var-defs "x" "./testResources/sample.clj")
       top-level-forms
       matching-rows))
+
+
