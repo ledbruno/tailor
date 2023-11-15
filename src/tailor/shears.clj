@@ -17,13 +17,16 @@
 (defn- from-var [var-name usages]
   (filter #(= (symbol var-name) (:from-var %)) usages))
 
+(defn- kondo-analysis [files]
+  (:analysis (clj-kondo/run!
+              {:lint files
+               :skip-lint true
+               :config {:analysis true}})))
+
 (defn find-var-defs
   "Returns a list of var defs with that matches the given symbol-str"
   [symbol-str file-path]
-  (let  [analysis (:analysis (clj-kondo/run!
-                              {:lint [file-path]
-                               :skip-lint true
-                               :config {:analysis true}}))]
+  (let  [analysis (kondo-analysis [file-path])]
     {:matches (var-named symbol-str analysis)
      :analysis analysis}))
 
@@ -75,45 +78,46 @@
   (-> (find-var-defs def-str file)
       (shear-matches file)))
 
-(defn- usages
-  "Return a list of direct usages of a given var, with the :var-name and :file-path, so Tailor can shear it!
+(defn- usage-info [var-usage]
+  (select-keys var-usage [:to :name :from :from-var]))
+
+(defn file-and-var [usage namespaces]
+  (let [match ((:to usage) namespaces)]
+    (when match (merge match (select-keys usage [:name])))))
+
+(defn usages
+  "Return a list of direct usages of a given var, with the :name and :filename, so Tailor can shear it!
   It stops to find usage when limit reachs 0/1"
-  [target-var file limit])
+  [target-var file _limit]
+  (let [analysis   (kondo-analysis file)
+        ns-map     (index-by :name (:namespace-definitions analysis) [:name :filename])
+        usages     (map usage-info (:var-usages analysis))
+        ns-matches (select-keys ns-map (map :to (from-var target-var usages)))]
+    (filter identity (map #(file-and-var % ns-matches) usages))))
 
 (defn shear-usage [usage-to-shear]
-  (shear-top-level (:var-name usage-to-shear) (:file-path usage-to-shear)))
+  (shear-top-level (:name usage-to-shear) (:filename usage-to-shear)))
 
-(defn deep-shear [target-var file]
-  (let [top-level-src (shear-top-level target-var file)
-        usages-to-shear (usages target-var file 10) ; should return a list in order make conj work properly
+(defn deep-shear [target-var target-file-path classpath-files-vec]
+  (let [top-level-src (shear-top-level target-var target-file-path)
+        usages-to-shear (usages target-var classpath-files-vec 10) ; should return a list in order make conj work properly
         usage-src (map shear-usage usages-to-shear)
         all-src  (conj usage-src top-level-src)]
     (string/join "\n" all-src)))
 
 (comment
+  (usages "my-fn"  ["./testResources/deep/1/root.clj"
+                    "./testResources/deep/1/other_ns.clj"
+                    "./testResources/deep/1/another.clj"
+                    "./testResources/deep/1/root_dependency.clj"] nil)
 
-  (def analysis (:analysis (clj-kondo/run!
-                            {:lint ["./testResources/deep/1/root.clj"
-                                    "./testResources/deep/1/other_ns.clj"
-                                    "./testResources/deep/1/another.clj"
-                                    "./testResources/deep/1/root_dependency.clj"]
-                             :skip-lint true
-                             :config {:analysis true}})))
-  (defn usage-info [var-usage]
-    (select-keys var-usage [:to :name :from :from-var]))
+  (deep-shear "my-fn" "./testResources/deep/1/root.clj"
+              ["./testResources/deep/1/root.clj"
+               "./testResources/deep/1/other_ns.clj"
+               "./testResources/deep/1/another.clj"
+               "./testResources/deep/1/root_dependency.clj"])
 
-  (def ns-map (index-by :name (:namespace-definitions analysis) [:name :filename]))
-
-  (def usages (map usage-info (:var-usages analysis)))
-
-  (def ns-matches (select-keys ns-map (map :to (from-var "my-fn" usages))))
-  (defn file-and-var [usage namespaces]
-    (let [match ((:to usage) namespaces)]
-      (when match (merge match (select-keys usage [:name])))))
-
-  (filter identity (map #(file-and-var % ns-matches) usages))
-
-  ; ({:name call-fn, :filename "./testResources/deep/1/other_ns.clj"}
+; ({:name call-fn, :filename "./testResources/deep/1/other_ns.clj"}
   ;  {:name another-fn, :filename "./testResources/deep/1/another.clj"}
   ;  {:name just-for-root,
   ;   :filename "./testResources/deep/1/root_dependency.clj"}
