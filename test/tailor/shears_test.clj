@@ -18,11 +18,13 @@
                                          "./testResources/deep/1/root_dependency.clj"]))))
 
   (testing "1 level depth defn"
-    (is  (= "(defn call-fn [arg1]\n
-               (println arg1)\n  
-               (another/child-call 1))\n\n
-            (defn child-call [arg1]\n  
-              (println arg1))\n" 
+    (is  (= "(defn call-fn [arg1]
+  (println arg1)
+  (another/child-call 1))
+
+(defn child-call [arg1]
+  (println arg1))
+"
             (deep-shear "call-fn"  "./testResources/deep/1/other_ns.clj"
                                         ["./testResources/deep/1/root.clj"
                                          "./testResources/deep/1/other_ns.clj"
