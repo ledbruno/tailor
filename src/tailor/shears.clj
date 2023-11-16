@@ -111,11 +111,25 @@
                     "./testResources/deep/1/another.clj"
                     "./testResources/deep/1/root_dependency.clj"] nil)
 
-  (deep-shear "my-fn" "./testResources/deep/1/root.clj"
+  (spit "/tmp/result.clj" (deep-shear "my-fn" "./testResources/deep/1/root.clj"
               ["./testResources/deep/1/root.clj"
                "./testResources/deep/1/other_ns.clj"
                "./testResources/deep/1/another.clj"
-               "./testResources/deep/1/root_dependency.clj"])
+               "./testResources/deep/1/root_dependency.clj"]))
+
+  (spit "/tmp/result.clj" (deep-shear "just-for-root"  "./testResources/deep/1/root_dependency.clj"
+              ["./testResources/deep/1/root.clj"
+               "./testResources/deep/1/other_ns.clj"
+               "./testResources/deep/1/another.clj"
+               "./testResources/deep/1/root_dependency.clj"]))
+  
+  (spit "/tmp/result.clj" (deep-shear "call-fn"  "./testResources/deep/1/other_ns.clj"
+              ["./testResources/deep/1/root.clj"
+               "./testResources/deep/1/other_ns.clj"
+               "./testResources/deep/1/another.clj"
+               "./testResources/deep/1/root_dependency.clj"]))
+
+
 
 ; ({:name call-fn, :filename "./testResources/deep/1/other_ns.clj"}
   ;  {:name another-fn, :filename "./testResources/deep/1/another.clj"}
