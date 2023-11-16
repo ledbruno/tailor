@@ -1,4 +1,4 @@
-(ns deep.1.root 
+(ns deep.1.root
   (:require
    [deep.1.another :as another]
    [deep.1.other-ns :as other-ns]
@@ -11,3 +11,6 @@
   (another/another-fn 1 2 3 4)
   (root-dependency/just-for-root)
   (root-dependency/another-just))
+
+(defn root-to-other []
+  (other-ns/call-fn 1))
