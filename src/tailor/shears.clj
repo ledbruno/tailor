@@ -105,24 +105,26 @@
     (filter identity ns-matches)))
 
 (defn shear-dependency [var-usage]
-  (str (helper/ns-declare (:ns var-usage) ) (shear-top-level (:name var-usage) (:filename var-usage))))
+  (str (helper/ns-declare (:ns var-usage)) (shear-top-level (:name var-usage) (:filename var-usage))))
 
 (defn deep-shear
-  [target-var target-file-path classpath-files-vec]
-  (let [var-usages          (usages target-var classpath-files-vec)  ; should return a list in order make conj work properly
-        target-ns           (:from (first var-usages))
+  [target-symbol target-file-path classpath-files-vec]
+  (let [target-var (name target-symbol)
+        target-ns (namespace target-symbol)
+        var-usages          (usages target-var classpath-files-vec)  ; should return a list in order make conj work properly
         usages-src          (s/join (map shear-dependency var-usages))
         top-level-src       (str (helper/ns-declare target-ns var-usages) "\n" (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
 (comment
-  (helper/ns-declare 'my-fn (usages "my-fn"  ["./testResources/deep/1/root.clj"
-                    "./testResources/deep/1/other_ns.clj"
-                    "./testResources/deep/1/another.clj"
-                    "./testResources/deep/1/root_dependency.clj"]))
-  (spit "/tmp/result.clj" (deep-shear "my-fn" "./testResources/deep/1/root.clj"
+  (usages "just-for-root"      ["./testResources/deep/1/root.clj"
+                                "./testResources/deep/1/other_ns.clj"
+                                "./testResources/deep/1/another.clj"
+                                "./testResources/deep/1/root_dependency.clj"])
+  (spit "/tmp/result.clj" (deep-shear "just-for-root" "./testResources/deep/1/root.clj"
                                       ["./testResources/deep/1/root.clj"
                                        "./testResources/deep/1/other_ns.clj"
                                        "./testResources/deep/1/another.clj"
                                        "./testResources/deep/1/root_dependency.clj"])))
+
 
