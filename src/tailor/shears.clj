@@ -113,7 +113,7 @@
         target-ns (namespace target-symbol)
         var-usages          (usages target-var classpath-files-vec)  ; should return a list in order make conj work properly
         usages-src          (s/join (map shear-dependency var-usages))
-        top-level-src       (str (helper/ns-declare target-ns var-usages) "\n" (shear-top-level target-var target-file-path))]
+        top-level-src       (str (helper/ns-declare target-ns var-usages) (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
 (comment

@@ -49,7 +49,7 @@
 
 (deftest test-deep-shear
   (testing "Shallow defn"
-    (is (= "\n(ns deep.1.root-dependency\n(:require )\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root  "./testResources/deep/1/root_dependency.clj"
+    (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root  "./testResources/deep/1/root_dependency.clj"
                                                                                               classpath-1))))
 
   (testing "1 level depth defn"
@@ -57,9 +57,9 @@
             (deep-shear 'deep.1.other-ns/call-fn  "./testResources/deep/1/other_ns.clj"
                         classpath-1))))
 
-  #_(testing "Evaluable code, respect dependenct order"
+  (testing "Evaluable code, respect dependency order"
     (is  (= (slurp "./testResources/expected/my-fn.clj")
-            (spit "/tmp/my-fn.clj" (deep-shear 'deep.1.root/my-fn  "./testResources/deep/1/other_ns.clj"
+            (spit "/tmp/my-fn.clj" (deep-shear 'deep.1.root/my-fn  "./testResources/deep/1/root.clj"
                         classpath-1)))))
 
   #_(testing "2 level depth defn"
