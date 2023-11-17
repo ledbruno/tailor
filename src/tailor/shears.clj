@@ -15,8 +15,13 @@
 (defn- var-named [var-name {var-defs :var-definitions}]
   (filter #(= (symbol var-name) (:name %)) var-defs))
 
-(defn- from-var [var-name usages]
-  (filter #(= (symbol var-name) (:from-var %)) usages))
+#_(defn matching-usages [s-var usages]
+    (filter #(= (symbol (name s-var)) (:from-var %)) usages))
+
+(defn matching-usages [s-var usages]
+  (filter #(and (= (symbol (namespace s-var)) (:from %))
+                (= (symbol (name s-var)) (:from-var %)))
+          usages))
 
 (defn- kondo-analysis [files]
   (:analysis (clj-kondo/run!
@@ -95,33 +100,57 @@
 (defn usages
   "Return a list of single level/direct usages of a given var, with the agregated usage-info
   :ns :alias :filename :name :from"
-  [target-var file]
-  (let [analysis        (kondo-analysis file)
+  [target-symbol classpath]
+  (let [analysis        (kondo-analysis classpath)
         ns-map          (index-by :name (:namespace-definitions analysis) [:name :filename])
         usages          (map usage-info (:var-usages analysis))
-        matches         (from-var target-var usages)
-        ns-matches-map  (select-keys ns-map (map :to (from-var target-var usages)))
+        matches         (matching-usages target-symbol usages)
+        ns-matches-map  (select-keys ns-map (map :to matches))
         ns-matches      (map #(ns-usages ns-matches-map %) matches)]
     (filter identity ns-matches)))
 
 (defn shear-dependency [var-usage]
   (str (helper/ns-declare (:ns var-usage)) (shear-top-level (:name var-usage) (:filename var-usage))))
 
+(defn usage-symbol [parent-usage]
+  (symbol (name (:from parent-usage)) (name (:name parent-usage))))
+
+(defn- deep-usage [parent-usage classpath]
+  (usages (usage-symbol parent-usage) classpath))
+
+(defn deep [var-usages classpath]
+  (flatten (conj (map #(deep-usage % classpath) var-usages) var-usages)))
+
 (defn deep-shear
-  [target-symbol target-file-path classpath-files-vec]
-  (let [target-var (name target-symbol)
-        target-ns (namespace target-symbol)
-        var-usages          (usages target-var classpath-files-vec)  ; should return a list in order make conj work properly
+  [target-symbol target-file-path classpath]
+  (let [target-var          (name target-symbol)
+        target-ns           (namespace target-symbol)
+        var-usages          (deep (usages target-symbol classpath) classpath)  ; should return a list in order make conj work properly
         usages-src          (s/join (map shear-dependency var-usages))
         top-level-src       (str (helper/ns-declare target-ns var-usages) (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
 (comment
-  (usages "just-for-root"      ["./testResources/deep/1/root.clj"
-                                "./testResources/deep/1/other_ns.clj"
-                                "./testResources/deep/1/another.clj"
-                                "./testResources/deep/1/root_dependency.clj"])
-  (spit "/tmp/result.clj" (deep-shear "just-for-root" "./testResources/deep/1/root.clj"
+  (deep '({:alias other-ns,
+           :filename "./testResources/deep/1/other_ns.clj",
+           :from deep.1.root,
+           :name call-fn,
+           :ns deep.1.other-ns})
+        ["./testResources/deep/1/root.clj"
+         "./testResources/deep/1/other_ns.clj"
+         "./testResources/deep/1/another.clj"
+         "./testResources/deep/1/root_dependency.clj"])
+
+  (usages "run" ["./testResources/deep/2/top_level.clj"
+                 "./testResources/deep/2/deep_1.clj"
+                 "./testResources/deep/2/deep_2.clj"
+                 "./testResources/deep/2/deep_3.clj"])
+
+  (usages "my-fn" ["./testResources/deep/1/root.clj"
+                   "./testResources/deep/1/other_ns.clj"
+                   "./testResources/deep/1/another.clj"
+                   "./testResources/deep/1/root_dependency.clj"])
+  (spit "/tmp/result.clj" (deep-shear 'deep.1.root/my-fn "./testResources/deep/1/root.clj"
                                       ["./testResources/deep/1/root.clj"
                                        "./testResources/deep/1/other_ns.clj"
                                        "./testResources/deep/1/another.clj"
