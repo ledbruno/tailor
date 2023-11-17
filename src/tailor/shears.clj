@@ -3,9 +3,8 @@
    [clj-kondo.core :as clj-kondo]
    [clojure.java.shell :as shell]
    [clojure.set :as set]
-   [clojure.string :as string]))
-
-(def max-depth 2)
+   [clojure.string :as s]
+   [tailor.helper :as helper]))
 
 (defn index-by
   ([key-fn coll]
@@ -57,7 +56,7 @@
   (assoc result :matching-rows (set/intersection (rows top-level-forms) (rows matches))))
 
 (defn mark
-  "Mark organizes matches by index in order to make easier to cut/shear"
+  "Mark organizes matches by index in order to make easier to shear/cut the source code"
   [{:keys [matches matching-rows]}]
   ;maybe map all, not only the first matching row, other rows can have valid results
   (get (index-by :row matches) (first matching-rows)))
@@ -81,15 +80,21 @@
       (shear-matches file)))
 
 (defn- usage-info [var-usage]
-  (select-keys var-usage [:to :name :from :from-var]))
+  (select-keys var-usage [:to :name :from :from-var :alias]))
 
 ;TODO:unit test this!
 (defn ns-usages [ns-matches-map usage]
-  (let [match ((:to usage) ns-matches-map)]
-    (when match {:name (:name usage) :filename (:filename match)})))
+  (let [namespace-match ((:to usage) ns-matches-map)]
+    (when namespace-match
+      {:name (:name usage)
+       :alias (:alias usage)
+       :from (:from usage)
+       :ns (:name namespace-match)
+       :filename (:filename namespace-match)})))
 
 (defn usages
-  "Return a list of single level/direct usages of a given var, with the :name and :filename"
+  "Return a list of single level/direct usages of a given var, with the agregated usage-info
+  :ns :alias :filename :name :from"
   [target-var file]
   (let [analysis        (kondo-analysis file)
         ns-map          (index-by :name (:namespace-definitions analysis) [:name :filename])
@@ -99,37 +104,25 @@
         ns-matches      (map #(ns-usages ns-matches-map %) matches)]
     (filter identity ns-matches)))
 
-(defn shear-usage [usage-to-shear]
-  (shear-top-level (:name usage-to-shear) (:filename usage-to-shear)))
+(defn shear-dependency [var-usage]
+  (str (helper/ns-declare (:ns var-usage) ) (shear-top-level (:name var-usage) (:filename var-usage))))
 
-(defn deep-usages [target-var classpath-files-vec]
-  (reduce (fn [usages-results _]
-            (map #(usages (name (:name %)) (:filename %)) usages-results))
-          (usages target-var classpath-files-vec) (range max-depth)))
-
-(defn deep-shear [target-var target-file-path classpath-files-vec]
-  (let [top-level-src       (shear-top-level target-var target-file-path)
-        usages-to-shear     (usages target-var classpath-files-vec)  #_(deep-usages target-var classpath-files-vec) ; should return a list in order make conj work properly
-        usage-src           (map shear-usage usages-to-shear)
-        all-src             (conj usage-src top-level-src)]
-    (string/join "\n" all-src)))
+(defn deep-shear
+  [target-var target-file-path classpath-files-vec]
+  (let [var-usages          (usages target-var classpath-files-vec)  ; should return a list in order make conj work properly
+        target-ns           (:from (first var-usages))
+        usages-src          (s/join (map shear-dependency var-usages))
+        top-level-src       (str (helper/ns-declare target-ns var-usages) "\n" (shear-top-level target-var target-file-path))]
+    (str usages-src "\n" top-level-src)))
 
 (comment
-  (usages "call-fn"  ["./testResources/deep/1/root.clj"
-                      "./testResources/deep/1/other_ns.clj"
-                      "./testResources/deep/1/another.clj"
-                      "./testResources/deep/1/root_dependency.clj"])
-
+  (helper/ns-declare 'my-fn (usages "my-fn"  ["./testResources/deep/1/root.clj"
+                    "./testResources/deep/1/other_ns.clj"
+                    "./testResources/deep/1/another.clj"
+                    "./testResources/deep/1/root_dependency.clj"]))
   (spit "/tmp/result.clj" (deep-shear "my-fn" "./testResources/deep/1/root.clj"
                                       ["./testResources/deep/1/root.clj"
                                        "./testResources/deep/1/other_ns.clj"
                                        "./testResources/deep/1/another.clj"
-                                       "./testResources/deep/1/root_dependency.clj"]))
-
-  (defn cleanup [var-usage]
-    (select-keys var-usage [:ns :row :name :end-row]))
-  (-> (find-var-defs "x" "./testResources/sample.clj")
-      top-level-forms
-      matching-rows))
-
+                                       "./testResources/deep/1/root_dependency.clj"])))
 

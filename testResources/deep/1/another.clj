@@ -5,3 +5,6 @@
 
 (defn child-call [arg1]
   (println arg1))
+
+(defn fn1 [arg1])
+(defn fn2 [arg1])

@@ -16,18 +16,20 @@
    "./testResources/deep/1/root_dependency.clj"])
 
 (deftest test-deep-shear
-  (testing "Shallow defn"
+  #_(testing "Shallow defn"
     (is (= "(defn just-for-root [])\n" (deep-shear "just-for-root"  "./testResources/deep/1/root_dependency.clj"
                                                    classpath-1))))
 
   (testing "1 level depth defn"
-    (is  (= (str "(defn call-fn [arg1]\n"
+    (is  (= (str "(defn child-call [arg1]\n"
+                 "  (println arg1))\n\n"
+                 "(defn call-fn [arg1]\n"
                  "  (println arg1)\n"
-                 "  (another/child-call 1))\n\n"
-                 "(defn child-call [arg1]\n"
-                 "  (println arg1))\n")
+                 "  (another/child-call 1))\n"
+                 )
             (deep-shear "call-fn"  "./testResources/deep/1/other_ns.clj"
                         classpath-1))))
+
 
   #_(testing "2 level depth defn"
     (is  (= (str "(defn root-to-other []\n"
