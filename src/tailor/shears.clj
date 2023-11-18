@@ -16,7 +16,7 @@
   (filter #(= (symbol var-name) (:name %)) var-defs))
 
 (defn matching-usages [s-var usages]
-  (filter #(and #_true (= (symbol (namespace s-var)) (:from %))
+  (filter #(and (= (symbol (namespace s-var)) (:from %))
                 (= (symbol (name s-var)) (:from-var %)))
           usages))
 
@@ -81,11 +81,21 @@
   (-> (find-var-defs def-str file)
       (shear-matches file)))
 
+(defn destination-symbol
+  "Used to create target usage symbol on getting deep into usages
+  In other words, it gets the usage destination-info"
+  [usage]
+  (symbol (name (:ns usage)) (name (:name usage))))
+
+(defn origin-symbol
+  [usage]
+  (symbol (name (:from usage)) (name (:from-var usage))))
+
 (defn- usage-info [var-usage]
   (select-keys var-usage [:to :name :from :from-var :alias]))
 
 ;TODO:unit test this!
-(defn ns-usages [ns-matches-map usage]
+(defn ns-usage-info [ns-matches-map usage]
   (let [namespace-match ((:to usage) ns-matches-map)]
     (when namespace-match
       {;destination-info
@@ -95,11 +105,10 @@
        :filename (:filename namespace-match)
        ;origin info
        :from (:from usage)
-       :from-var (:from-var usage)
-       })))
+       :from-var (:from-var usage)})))
 
 (defn usages
-  "Return a list of single level/direct usages of a given var, with the agregated usage-info
+  "Return a list of single level/direct usages of a given var, with the agregated ns-usage-info
   :ns :alias :filename :name :from"
   [target-symbol classpath]
   (let [analysis        (kondo-analysis classpath)
@@ -107,21 +116,16 @@
         usages          (map usage-info (:var-usages analysis))
         matches         (matching-usages target-symbol usages)
         ns-matches-map  (select-keys ns-map (map :to matches))
-        ns-matches      (map #(ns-usages ns-matches-map %) matches)]
-    (println :for target-symbol :usages matches)
-    (filter identity ns-matches)))
+        ns-matches      (map #(ns-usage-info ns-matches-map %) matches)
+        non-nil-matches (filter identity ns-matches)]
+    non-nil-matches))
 
-(defn shear-dependency [var-usage]
-  (str (helper/ns-declare (:ns var-usage)) (shear-top-level (:name var-usage) (:filename var-usage))))
+(defn shear-dependency [dep-usage all-usages]
+  (let [deps (matching-usages (destination-symbol dep-usage) all-usages)]
+    (str (helper/ns-declare (:ns dep-usage) deps) (shear-top-level (:name dep-usage) (:filename dep-usage)))))
 
-(defn usage-symbol 
-  "Used to create target usage symbol on getting deep into usages
-  In other words, it gets the usage destination-info"
-  [parent-usage]
-  (symbol (name (:ns parent-usage)) (name (:name parent-usage))))
-
-(defn- deep-usage [parent-usage classpath]
-  (usages (usage-symbol parent-usage) classpath))
+(defn- deep-usage [usage classpath]
+  (usages (destination-symbol usage) classpath))
 
 (defn deep [var-usages classpath]
   (flatten (conj (map #(deep-usage % classpath) var-usages) var-usages)))
@@ -131,7 +135,7 @@
   (let [target-var          (name target-symbol)
         target-ns           (namespace target-symbol)
         var-usages          (deep (usages target-symbol classpath) classpath)  ; should return a list in order make conj work properly
-        usages-src          (s/join (map shear-dependency var-usages))
+        usages-src          (s/join (map #(shear-dependency % var-usages) var-usages))
         top-level-src       (str (helper/ns-declare target-ns var-usages) (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
