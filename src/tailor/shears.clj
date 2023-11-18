@@ -15,11 +15,8 @@
 (defn- var-named [var-name {var-defs :var-definitions}]
   (filter #(= (symbol var-name) (:name %)) var-defs))
 
-#_(defn matching-usages [s-var usages]
-    (filter #(= (symbol (name s-var)) (:from-var %)) usages))
-
 (defn matching-usages [s-var usages]
-  (filter #(and (= (symbol (namespace s-var)) (:from %))
+  (filter #(and #_true (= (symbol (namespace s-var)) (:from %))
                 (= (symbol (name s-var)) (:from-var %)))
           usages))
 
@@ -91,11 +88,15 @@
 (defn ns-usages [ns-matches-map usage]
   (let [namespace-match ((:to usage) ns-matches-map)]
     (when namespace-match
-      {:name (:name usage)
-       :alias (:alias usage)
-       :from (:from usage)
+      {;destination-info
        :ns (:name namespace-match)
-       :filename (:filename namespace-match)})))
+       :name (:name usage)
+       :alias (:alias usage)
+       :filename (:filename namespace-match)
+       ;origin info
+       :from (:from usage)
+       :from-var (:from-var usage)
+       })))
 
 (defn usages
   "Return a list of single level/direct usages of a given var, with the agregated usage-info
@@ -107,13 +108,17 @@
         matches         (matching-usages target-symbol usages)
         ns-matches-map  (select-keys ns-map (map :to matches))
         ns-matches      (map #(ns-usages ns-matches-map %) matches)]
+    (println :for target-symbol :usages matches)
     (filter identity ns-matches)))
 
 (defn shear-dependency [var-usage]
   (str (helper/ns-declare (:ns var-usage)) (shear-top-level (:name var-usage) (:filename var-usage))))
 
-(defn usage-symbol [parent-usage]
-  (symbol (name (:from parent-usage)) (name (:name parent-usage))))
+(defn usage-symbol 
+  "Used to create target usage symbol on getting deep into usages
+  In other words, it gets the usage destination-info"
+  [parent-usage]
+  (symbol (name (:ns parent-usage)) (name (:name parent-usage))))
 
 (defn- deep-usage [parent-usage classpath]
   (usages (usage-symbol parent-usage) classpath))

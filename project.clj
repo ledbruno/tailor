@@ -6,4 +6,4 @@
                  [clj-kondo "2023.05.26"]]
   :profiles {:test {:resource-paths ["testResources"]
                     :dependencies [[nubank/matcher-combinators "3.8.5"]]}}
-  :repl-options {:init-ns tailor.core})
+  #_#_:repl-options {:init-ns tailor.shears})
