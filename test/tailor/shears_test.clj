@@ -128,14 +128,8 @@
             (deep-shear 'deep.1.root/root-to-other  "./testResources/deep/1/root.clj"
                         classpath-1))))
 
-;TODO improve this test to check actual order...
-  #_(testing "Evaluable code, respect dependency order"
-      (is  (= (slurp "./testResources/expected/my-fn.clj")
-              (deep-shear 'deep.1.root/my-fn  "./testResources/deep/1/root.clj"
-                          classpath-1))))
-
-  #_(testing "1 level depth"
-      (is  (= (slurp "./testResources/expected/level_1.clj")
+  (testing "2 levels depth"
+      (is  (= (slurp "./testResources/expected/level_2.clj")
               (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
                           classpath-2)))))
 
