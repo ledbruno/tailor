@@ -8,7 +8,6 @@
   (println arg1))
 
 (ns deep.1.root
-(:require [deep.1.other-ns :as other-ns]
-[deep.1.another :as another]))
+(:require [deep.1.other-ns :as other-ns]))
 (defn root-to-other []
   (other-ns/call-fn 1))

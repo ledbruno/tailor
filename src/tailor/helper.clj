@@ -15,6 +15,8 @@
   ([ns] 
    (str "(ns " (name ns) ")\n"))
   ([ns usages]
+   (println :ns ns)
+   (println :usages usages)
    (if (empty? usages)
      (ns-declare ns)
      (str "(ns " (name ns) "\n" (requires usages) ")\n"))))

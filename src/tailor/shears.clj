@@ -136,7 +136,7 @@
         target-ns           (namespace target-symbol)
         var-usages          (deep (usages target-symbol classpath) classpath)  ; should return a list in order make conj work properly
         usages-src          (s/join (map #(shear-dependency % var-usages) var-usages))
-        top-level-src       (str (helper/ns-declare target-ns var-usages) (shear-top-level target-var target-file-path))]
+        top-level-src       (str (helper/ns-declare target-ns (matching-usages target-symbol var-usages)) (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
 (comment
