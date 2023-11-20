@@ -14,3 +14,9 @@
 
 (defn root-to-other []
   (other-ns/call-fn 1))
+
+(defn- inner-fn [arg1]
+  (println "inner fn" arg1))
+
+(defn inner-indirection []
+  (inner-fn 1))

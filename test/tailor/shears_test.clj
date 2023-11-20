@@ -6,13 +6,13 @@
   (is (= 'my-ns/my-fn (destination-symbol {:ns 'my-ns :name 'my-fn}))))
 
 (deftest test-matching-usages
-  (is (= '({:from-var my-fn
-            :from target-ns})
-         (matching-usages 'target-ns/my-fn
-                          '({:from-var my-fn
-                             :from other-ns}
-                            {:from-var my-fn
-                             :from target-ns})))))
+  (testing "Simple match" (is (= '({:from-var my-fn
+                                    :from target-ns})
+                                 (matching-usages 'target-ns/my-fn
+                                                  '({:from-var my-fn
+                                                     :from other-ns}
+                                                    {:from-var my-fn
+                                                     :from target-ns}))))))
 
 (deftest test-shear-top-level
   (testing "Shears a simple def top level"
@@ -24,6 +24,7 @@
 (def ^:private classpath-1
   ["./testResources/deep/1/root.clj"
    "./testResources/deep/1/other_ns.clj"
+   "./testResources/deep/1/big_internal.clj"
    "./testResources/deep/1/another.clj"
    "./testResources/deep/1/root_dependency.clj"])
 
@@ -72,7 +73,7 @@
               :ns deep.2.deep-1}) (usages 'deep.2.top-level/run
                                           classpath-2)))))
 
-(deftest test-deep
+(deftest test-deep-usages
   (testing "One level deep"
     (is (= '({:alias other-ns,
               :filename "./testResources/deep/1/other_ns.clj",
@@ -84,7 +85,7 @@
               :alias another,
               :from-var call-fn
               :from deep.1.other-ns,
-              :ns deep.1.another,
+              :ns deep.1.another
               :filename "./testResources/deep/1/another.clj"})
            (deep '({:alias other-ns,
                     :filename "./testResources/deep/1/other_ns.clj",
@@ -92,46 +93,68 @@
                     :from-var my-fn
                     :name call-fn,
                     :ns deep.1.other-ns})
-                 classpath-1))))
+                 classpath-1
+                 10)))
 
-  (testing "One level deep"
-      (is (= '({:alias other-ns,
-                :filename "./testResources/deep/1/other_ns.clj",
-                :from deep.1.root,
-                :name call-fn,
-                :ns deep.1.other-ns}
-               {:name child-call,
-                :from-var call-fn
-                :alias another,
-                :from deep.1.other-ns,
-                :ns deep.1.another,
-                :filename "./testResources/deep/1/another.clj"})
-             (deep '({:alias other-ns,
-                      :filename "./testResources/deep/1/other_ns.clj",
-                      :from deep.1.root,
-                      :name call-fn,
-                      :ns deep.1.other-ns})
-                   classpath-1)))))
+    (testing "Deep until bottom"
+      (is (= '({:ns deep.2.deep-1,
+                :name run,
+                :alias deep-1,
+                :filename "./testResources/deep/2/deep_1.clj",
+                :from deep.2.top-level,
+                :from-var run}
+               {:ns deep.2.deep-2,
+                :name run,
+                :alias deep-2,
+                :filename "./testResources/deep/2/deep_2.clj",
+                :from deep.2.deep-1,
+                :from-var run}
+               {:ns deep.2.deep-3,
+                :name run,
+                :alias deep-3,
+                :filename "./testResources/deep/2/deep_3.clj",
+                :from deep.2.deep-2,
+                :from-var run})
+             (deep '({:ns deep.2.deep-1,
+                      :name run,
+                      :alias deep-1,
+                      :filename "./testResources/deep/2/deep_1.clj",
+                      :from deep.2.top-level,
+                      :from-var run})
+                   classpath-2
+                   10))))))
 
 (deftest test-deep-shear
   (testing "Shallow defn"
     (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root  "./testResources/deep/1/root_dependency.clj"
                                                                                   classpath-1))))
+  
+  (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
+    (is (= "\n(ns deep.1.root)\n(defn just-for-root [])\n" (spit "/tmp/result.clj" (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
+                                                                                               classpath-1)))))
 
   (testing "1 level depth defn, no requires from the last/bottom usage"
-      (is  (= (slurp "./testResources/expected/call-fn.clj")
-              (deep-shear 'deep.1.other-ns/call-fn  "./testResources/deep/1/other_ns.clj"
-                          classpath-1))))
+    (is  (= (slurp "./testResources/expected/call-fn.clj")
+            (deep-shear 'deep.1.other-ns/call-fn  "./testResources/deep/1/other_ns.clj"
+                        classpath-1))))
 
   (testing "1 level depth defn, WITH requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/with-require.clj")
             (deep-shear 'deep.1.root/root-to-other  "./testResources/deep/1/root.clj"
                         classpath-1))))
-
+  (testing "3 levels depth"
+    (is  (= (slurp "./testResources/expected/level_3.clj")
+            (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
+                        classpath-2))))
   (testing "2 levels depth"
-      (is  (= (slurp "./testResources/expected/level_2.clj")
-              (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
-                          classpath-2)))))
+    (is  (= (slurp "./testResources/expected/level_2.clj")
+            (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
+                        classpath-2 2))))
+
+  #_(testing "Big and complex Internal indirection flow"
+      (is  (= (slurp "./testResources/expected/internal_redirection.clj")
+              (deep-shear 'deep.1.big-internal/starting "./testResources/deep/1/big_internal.clj"
+                          classpath-1)))))
 
 (comment
   (require '[clojure.tools.namespace.repl :refer [refresh]])
