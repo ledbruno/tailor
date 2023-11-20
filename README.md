@@ -17,3 +17,4 @@ The **Shearing** expected result is valid/evaluable clojure source code, followi
 It enables other libs/engineers to build:
 - Automated refactoring tools that could help merge source code from multiple projects/modules. 
 - AI prompts with contextualized source code, enabling code suggestion or code automation tasks to be executed with better results
+- And others! Feel free to add other ideas!
