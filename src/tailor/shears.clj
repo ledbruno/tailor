@@ -26,10 +26,12 @@
                :skip-lint true
                :config {:analysis true}})))
 
+(def memoized-kondo (memoize kondo-analysis))
+
 (defn find-var-defs
   "Returns a list of var defs with that matches the given symbol-str"
   [symbol-str file-path]
-  (let  [analysis (kondo-analysis [file-path])]
+  (let  [analysis (memoized-kondo [file-path])]
     {:matches (var-named symbol-str analysis)
      :analysis analysis}))
 
@@ -107,7 +109,7 @@
   "Return a list of single level/direct usages of a given var, with the agregated ns-usage-info
   :ns :alias :filename :name :from"
   [target-symbol classpath]
-  (let [analysis        (kondo-analysis classpath)
+  (let [analysis        (memoized-kondo classpath)
         ns-map          (index-by :name (:namespace-definitions analysis) [:name :filename])
         usages          (map usage-info (:var-usages analysis))
         matches         (matching-usages target-symbol usages)
