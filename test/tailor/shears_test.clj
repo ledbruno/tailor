@@ -24,6 +24,7 @@
 (def ^:private classpath-1
   ["./testResources/deep/1/root.clj"
    "./testResources/deep/1/other_ns.clj"
+   "./testResources/deep/1/big_internal.clj"
    "./testResources/deep/1/another.clj"
    "./testResources/deep/1/root_dependency.clj"])
 
@@ -127,6 +128,9 @@
   (testing "Shallow defn"
     (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root  "./testResources/deep/1/root_dependency.clj"
                                                                                   classpath-1))))
+  #_(testing "Inner indirection should output single NS without requires"
+    (is (= "\n(ns deep.1.root)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
+                                                                                  classpath-1))))
 
   (testing "1 level depth defn, no requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/call-fn.clj")
@@ -142,9 +146,14 @@
             (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
                         classpath-2))))
   (testing "2 levels depth"
-      (is  (= (slurp "./testResources/expected/level_2.clj")
-              (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
-                          classpath-2 2)))))
+    (is  (= (slurp "./testResources/expected/level_2.clj")
+            (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
+                        classpath-2 2))))
+
+  #_(testing "Big and complex Internal indirection flow"
+      (is  (= (slurp "./testResources/expected/internal_redirection.clj")
+              (deep-shear 'deep.1.big-internal/starting "./testResources/deep/1/big_internal.clj"
+                          classpath-1)))))
 
 (comment
   (require '[clojure.tools.namespace.repl :refer [refresh]])

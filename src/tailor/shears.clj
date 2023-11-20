@@ -146,6 +146,7 @@
   ([target-symbol target-file-path classpath depth]
    (-> (usages target-symbol classpath)
        (deep classpath depth)
+       reverse
        (shear-from target-symbol target-file-path)))
   ([target-symbol target-file-path classpath]
    (deep-shear target-symbol target-file-path classpath max-depth)))
