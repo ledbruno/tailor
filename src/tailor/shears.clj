@@ -118,14 +118,17 @@
         non-nil-matches (filter identity ns-matches)]
     non-nil-matches))
 
+(defn- external-usage
+  [usage]
+  (not= (:from usage) (:ns usage)))
+
 (defn shear-dependency [dep-usage all-usages]
-  (let [deps (matching-usages (destination-symbol dep-usage) all-usages)]
-    (str (helper/ns-declare (:ns dep-usage) deps) (shear-top-level (:name dep-usage) (:filename dep-usage)))))
+  (let [deps (matching-usages (destination-symbol dep-usage) all-usages)
+        external-deps (filter external-usage deps)]
+    (str (helper/ns-declare (:ns dep-usage) external-deps) (shear-top-level (:name dep-usage) (:filename dep-usage)))))
 
 (defn- deep-usages [usage classpath]
   (usages (destination-symbol usage) classpath))
-
-(defonce max-depth 10)
 
 (defn deep
   [parent-usages classpath depth]
@@ -139,9 +142,10 @@
   (let [target-var          (name target-symbol)
         target-ns           (namespace target-symbol)
         usages-src          (s/join (map #(shear-dependency % var-usages) var-usages))
-        top-level-src       (str (helper/ns-declare target-ns (matching-usages target-symbol var-usages)) (shear-top-level target-var target-file-path))]
+        top-level-src       (str (helper/ns-declare target-ns (filter external-usage (matching-usages target-symbol var-usages))) (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
+(defonce max-depth 10)
 (defn deep-shear
   ([target-symbol target-file-path classpath depth]
    (-> (usages target-symbol classpath)

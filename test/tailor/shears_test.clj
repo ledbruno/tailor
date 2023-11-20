@@ -6,13 +6,13 @@
   (is (= 'my-ns/my-fn (destination-symbol {:ns 'my-ns :name 'my-fn}))))
 
 (deftest test-matching-usages
-  (is (= '({:from-var my-fn
-            :from target-ns})
-         (matching-usages 'target-ns/my-fn
-                          '({:from-var my-fn
-                             :from other-ns}
-                            {:from-var my-fn
-                             :from target-ns})))))
+  (testing "Simple match" (is (= '({:from-var my-fn
+                                    :from target-ns})
+                                 (matching-usages 'target-ns/my-fn
+                                                  '({:from-var my-fn
+                                                     :from other-ns}
+                                                    {:from-var my-fn
+                                                     :from target-ns}))))))
 
 (deftest test-shear-top-level
   (testing "Shears a simple def top level"
@@ -128,9 +128,10 @@
   (testing "Shallow defn"
     (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root  "./testResources/deep/1/root_dependency.clj"
                                                                                   classpath-1))))
-  #_(testing "Inner indirection should output single NS without requires"
-    (is (= "\n(ns deep.1.root)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
-                                                                                  classpath-1))))
+  
+  (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
+    (is (= "\n(ns deep.1.root)\n(defn just-for-root [])\n" (spit "/tmp/result.clj" (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
+                                                                                               classpath-1)))))
 
   (testing "1 level depth defn, no requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/call-fn.clj")
