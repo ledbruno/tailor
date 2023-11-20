@@ -66,8 +66,8 @@
 (defn shear [root-matches file-path]
   (:out (cut (:row root-matches) (:end-row root-matches) file-path)))
 
-(defn shear-matches [result file]
-  (-> result
+(defn shear-matches [matches file]
+  (-> matches
       top-level-forms
       matching-rows
       mark
@@ -86,10 +86,6 @@
   In other words, it gets the usage destination-info"
   [usage]
   (symbol (name (:ns usage)) (name (:name usage))))
-
-(defn origin-symbol
-  [usage]
-  (symbol (name (:from usage)) (name (:from-var usage))))
 
 (defn- usage-info [var-usage]
   (select-keys var-usage [:to :name :from :from-var :alias]))
@@ -124,45 +120,30 @@
   (let [deps (matching-usages (destination-symbol dep-usage) all-usages)]
     (str (helper/ns-declare (:ns dep-usage) deps) (shear-top-level (:name dep-usage) (:filename dep-usage)))))
 
-(defn- deep-usage [usage classpath]
+(defn- deep-usages [usage classpath]
   (usages (destination-symbol usage) classpath))
 
-(defn deep [var-usages classpath]
-  (flatten (conj (map #(deep-usage % classpath) var-usages) var-usages)))
+(defonce max-depth 10)
 
-(defn deep-shear
-  [target-symbol target-file-path classpath]
+(defn deep
+  [parent-usages classpath depth]
+  (let [child-usages (map #(deep-usages % classpath) parent-usages)]
+    (if (or (= 0 depth) (empty? child-usages))
+      child-usages
+      (flatten (conj (map #(deep % classpath (- depth 1)) child-usages) parent-usages)))))
+
+(defn- shear-from
+  [var-usages target-symbol target-file-path]
   (let [target-var          (name target-symbol)
         target-ns           (namespace target-symbol)
-        var-usages          (deep (usages target-symbol classpath) classpath)  ; should return a list in order make conj work properly
         usages-src          (s/join (map #(shear-dependency % var-usages) var-usages))
         top-level-src       (str (helper/ns-declare target-ns (matching-usages target-symbol var-usages)) (shear-top-level target-var target-file-path))]
     (str usages-src "\n" top-level-src)))
 
-(comment
-  (deep '({:alias other-ns,
-           :filename "./testResources/deep/1/other_ns.clj",
-           :from deep.1.root,
-           :name call-fn,
-           :ns deep.1.other-ns})
-        ["./testResources/deep/1/root.clj"
-         "./testResources/deep/1/other_ns.clj"
-         "./testResources/deep/1/another.clj"
-         "./testResources/deep/1/root_dependency.clj"])
-
-  (usages "run" ["./testResources/deep/2/top_level.clj"
-                 "./testResources/deep/2/deep_1.clj"
-                 "./testResources/deep/2/deep_2.clj"
-                 "./testResources/deep/2/deep_3.clj"])
-
-  (usages "my-fn" ["./testResources/deep/1/root.clj"
-                   "./testResources/deep/1/other_ns.clj"
-                   "./testResources/deep/1/another.clj"
-                   "./testResources/deep/1/root_dependency.clj"])
-  (spit "/tmp/result.clj" (deep-shear 'deep.1.root/my-fn "./testResources/deep/1/root.clj"
-                                      ["./testResources/deep/1/root.clj"
-                                       "./testResources/deep/1/other_ns.clj"
-                                       "./testResources/deep/1/another.clj"
-                                       "./testResources/deep/1/root_dependency.clj"])))
-
-
+(defn deep-shear
+  ([target-symbol target-file-path classpath depth]
+   (-> (usages target-symbol classpath)
+       (deep classpath depth)
+       (shear-from target-symbol target-file-path)))
+  ([target-symbol target-file-path classpath]
+   (deep-shear target-symbol target-file-path classpath max-depth)))
