@@ -130,8 +130,9 @@
                                                                                   classpath-1))))
   
   (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
-    (is (= "\n(ns deep.1.root)\n(defn just-for-root [])\n" (spit "/tmp/result.clj" (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
-                                                                                               classpath-1)))))
+    (is (= (slurp "./testResources/expected/inner_indirection.clj" ) 
+           (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
+                                                                                               classpath-1))))
 
   (testing "1 level depth defn, no requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/call-fn.clj")
