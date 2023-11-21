@@ -12,7 +12,7 @@
   ([key-fn coll keys-to-keep]
    (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
-(defn- matching-var [target-symbol {var-defs :var-definitions}]
+(defn- matching-vars [target-symbol {var-defs :var-definitions}]
   (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
                 (= (symbol (name target-symbol)) (:name %)))
           var-defs))
@@ -50,7 +50,7 @@
   "Returns a list of var defs that matches the given target symbol"
   [target-symbol classpath]
   (->> (memoized-kondo classpath)
-       (matching-var target-symbol)))
+       (matching-vars target-symbol)))
 
 (defn matching-top-level [target-symbol classpath]
   (->> (matching-vars target-symbol classpath)
