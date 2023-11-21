@@ -16,6 +16,7 @@
 
 (deftest test-shear-top-level
   (testing "Shears a simple def top level"
+ (shear-top-level 'sample/x ["./testResources/sample.clj"])
     (is (= "(def x \"banana\")\n" (shear-top-level 'sample/x ["./testResources/sample.clj"]))))
 
   (testing "Shears a simple defn top level"
@@ -129,9 +130,10 @@
     (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
                                                                                   classpath-1))))
 
-  (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
-    (is (= "(ns deep.1.root)\n(defn- inner-fn [arg1]\n  (println \"inner fn\" arg1))\n\n(ns deep.1.root)\n(defn inner-indirection []\n  (inner-fn 1))\n" (deep-shear 'deep.1.root/inner-indirection
-                                                                       classpath-1))))
+  #_(testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
+    (is (= (slurp "./testResources/expected/inner_indirection.clj")
+           (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
+                       classpath-1))))
 
   (testing "1 level depth defn, no requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/call-fn.clj")

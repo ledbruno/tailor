@@ -2,7 +2,6 @@
   (:require
    [clj-kondo.core :as clj-kondo]
    [clojure.java.shell :as shell]
-   [clojure.set :as set]
    [clojure.string :as s]
    [tailor.helper :as helper]))
 
@@ -12,7 +11,7 @@
   ([key-fn coll keys-to-keep]
    (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
-(defn- matching-vars [target-symbol {var-defs :var-definitions}]
+(defn- symbol-match [target-symbol {var-defs :var-definitions}]
   (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
                 (= (symbol (name target-symbol)) (:name %)))
           var-defs))
@@ -46,14 +45,14 @@
   [ns classpath matches]
   (filter #(some #{(:row %)} (top-level-rows ns classpath)) matches))
 
-(defn matching-vars
+(defn symbol-matches
   "Returns a list of var defs that matches the given target symbol"
   [target-symbol classpath]
   (->> (memoized-kondo classpath)
-       (matching-vars target-symbol)))
+       (symbol-match target-symbol)))
 
 (defn matching-top-level [target-symbol classpath]
-  (->> (matching-vars target-symbol classpath)
+  (->> (symbol-matches target-symbol classpath)
        (matching-top-level-rows (symbol (namespace target-symbol)) classpath)))
 
 (defn- cut [from to file-path]
