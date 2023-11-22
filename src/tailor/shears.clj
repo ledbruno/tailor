@@ -2,7 +2,6 @@
   (:require
    [clj-kondo.core :as clj-kondo]
    [clojure.java.shell :as shell]
-   [clojure.set :as set]
    [clojure.string :as s]
    [tailor.helper :as helper]))
 
@@ -12,15 +11,17 @@
   ([key-fn coll keys-to-keep]
    (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
-(defn- var-named [var-name {var-defs :var-definitions}]
-  (filter #(= (symbol var-name) (:name %)) var-defs))
+(defn- symbol-match [target-symbol {var-defs :var-definitions}]
+  (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
+                (= (symbol (name target-symbol)) (:name %)))
+          var-defs))
 
 (defn matching-usages [s-var usages]
   (filter #(and (= (symbol (namespace s-var)) (:from %))
                 (= (symbol (name s-var)) (:from-var %)))
           usages))
 
-(defn- kondo-analysis [files]
+(defn kondo-analysis [files]
   (:analysis (clj-kondo/run!
               {:lint files
                :skip-lint true
@@ -28,60 +29,43 @@
 
 (def memoized-kondo (memoize kondo-analysis))
 
-(defn find-var-defs
-  "Returns a list of var defs with that matches the given symbol-str"
-  [symbol-str file-path]
-  (let  [analysis (memoized-kondo [file-path])]
-    {:matches (var-named symbol-str analysis)
-     :analysis analysis}))
+(defn top-level
+  "Returns top level forms of the given namespace"
+  [ns classpath]
+  (->> (memoized-kondo classpath)
+       :var-usages
+       (filter #(and (not (contains? % :from-var)) (= (:from %) ns)))))
+
+(defn top-level-rows
+  [ns classpath]
+  (set (map :row (top-level ns classpath))))
+
+(defn matching-top-level-rows
+  "Get the list of row matches that are also top level forms of a given NS"
+  [ns classpath matches]
+  (filter #(some #{(:row %)} (top-level-rows ns classpath)) matches))
+
+(defn symbol-matches
+  "Returns a list of var defs that matches the given target symbol"
+  [target-symbol classpath]
+  (->> (memoized-kondo classpath)
+       (symbol-match target-symbol)))
+
+(defn matching-top-level [target-symbol classpath]
+  (->> (symbol-matches target-symbol classpath)
+       (matching-top-level-rows (symbol (namespace target-symbol)) classpath)))
 
 (defn- cut [from to file-path]
   (when (and from to) (shell/sh "sed" "-n" (str from "," to "p") file-path)))
 
-(defn- analyzed-ns [which analysis]
-  (:name (which (:namespace-definitions analysis))))
-
-(defn top-level-forms
-  "Adds :top-level-forms to result, considering only the first namespace declared"
-  [result]
-  ;if more than one should throw an error?
-  (let [analysis (:analysis result)
-        var-usages (:var-usages analysis)
-        ns (analyzed-ns first analysis)
-        top-level (filter #(and (not (contains? % :from-var)) (= (:from %) ns)) var-usages)]
-    (assoc result :top-level-forms top-level)))
-
-(defn rows [usages-or-defs]
-  (set (map :row usages-or-defs)))
-
-(defn matching-rows
-  "Adds :matching-rows to the result, which are top level rows that matches with target/matching var. WARNING: brittle approach"
-  [{:keys [matches top-level-forms] :as result}]
-  (assoc result :matching-rows (set/intersection (rows top-level-forms) (rows matches))))
-
-(defn mark
-  "Mark organizes matches by index in order to make easier to shear/cut the source code"
-  [{:keys [matches matching-rows]}]
-  ;maybe map all, not only the first matching row, other rows can have valid results
-  (get (index-by :row matches) (first matching-rows)))
-
-(defn shear [root-matches file-path]
-  (:out (cut (:row root-matches) (:end-row root-matches) file-path)))
-
-(defn shear-matches [matches file]
-  (-> matches
-      top-level-forms
-      matching-rows
-      mark
-      (shear file)))
+(defn file-shear [match]
+  (:out (cut (:row match) (:end-row match) (:filename match))))
 
 (defn shear-top-level
-  "Returns the source code of the top level var var defined in a given file
-   def-str : the name of the target var
-   file    : path to the clj source code file"
-  [def-str file]
-  (-> (find-var-defs def-str file)
-      (shear-matches file)))
+  "Returns the sheared source code of the top level form defined on the classpath
+  target-symbol : namespaced symbol that is the shear target"
+  [target-symbol classpath]
+  (s/join (map file-shear (matching-top-level target-symbol classpath))))
 
 (defn destination-symbol
   "Used to create target usage symbol on getting deep into usages
@@ -122,10 +106,11 @@
   [usage]
   (not= (:from usage) (:ns usage)))
 
-(defn shear-dependency [dep-usage all-usages]
-  (let [deps (matching-usages (destination-symbol dep-usage) all-usages)
+(defn shear-dependency [dep-usage all-usages classpath]
+  (let [target-symbol (destination-symbol dep-usage)
+        deps (matching-usages target-symbol all-usages)
         external-deps (filter external-usage deps)]
-    (str (helper/ns-declare (:ns dep-usage) external-deps) (shear-top-level (:name dep-usage) (:filename dep-usage)))))
+    (str (helper/ns-declare (:ns dep-usage) external-deps) (shear-top-level target-symbol classpath))))
 
 (defn- deep-usages [usage classpath]
   (usages (destination-symbol usage) classpath))
@@ -137,20 +122,20 @@
       child-usages
       (flatten (conj (map #(deep % classpath (- depth 1)) child-usages) parent-usages)))))
 
-(defn- shear-from
-  [var-usages target-symbol target-file-path]
-  (let [target-var          (name target-symbol)
-        target-ns           (namespace target-symbol)
-        usages-src          (s/join (map #(shear-dependency % var-usages) var-usages))
-        top-level-src       (str (helper/ns-declare target-ns (filter external-usage (matching-usages target-symbol var-usages))) (shear-top-level target-var target-file-path))]
+(defn- shear
+  [var-usages target-symbol classpath]
+  (let [target-ns           (namespace target-symbol)
+        usages-src          (s/join (map #(shear-dependency % var-usages classpath) var-usages))
+        top-level-src       (str (helper/ns-declare target-ns (filter external-usage (matching-usages target-symbol var-usages)))
+                                 (shear-top-level target-symbol classpath))]
     (str usages-src "\n" top-level-src)))
 
 (defonce max-depth 10)
 (defn deep-shear
-  ([target-symbol target-file-path classpath depth]
+  ([target-symbol classpath depth]
    (-> (usages target-symbol classpath)
        (deep classpath depth)
        reverse
-       (shear-from target-symbol target-file-path)))
-  ([target-symbol target-file-path classpath]
-   (deep-shear target-symbol target-file-path classpath max-depth)))
+       (shear target-symbol classpath)))
+  ([target-symbol classpath]
+   (deep-shear target-symbol classpath max-depth)))

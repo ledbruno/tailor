@@ -16,10 +16,11 @@
 
 (deftest test-shear-top-level
   (testing "Shears a simple def top level"
-    (is (= "(def x \"banana\")\n" (shear-top-level "x" "./testResources/sample.clj"))))
+    (shear-top-level 'sample/x ["./testResources/sample.clj"])
+    (is (= "(def x \"banana\")\n" (shear-top-level 'sample/x ["./testResources/sample.clj"]))))
 
   (testing "Shears a simple defn top level"
-    (is (= "(defn my-fn []\n  (def x \"orange\")\n  (print \"bla\"))\n" (shear-top-level "my-fn" "./testResources/sample.clj")))))
+    (is (= "(defn my-fn []\n  (def x \"orange\")\n  (print \"bla\"))\n" (shear-top-level 'sample/my-fn ["./testResources/sample.clj"])))))
 
 (def ^:private classpath-1
   ["./testResources/deep/1/root.clj"
@@ -126,30 +127,30 @@
 
 (deftest test-deep-shear
   (testing "Shallow defn"
-    (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root  "./testResources/deep/1/root_dependency.clj"
+    (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
                                                                                   classpath-1))))
-  
+
   (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
-    (is (= (slurp "./testResources/expected/inner_indirection.clj" ) 
-           (deep-shear 'deep.1.root/inner-indirection "./testResources/deep/1/root.clj"
-                                                                                               classpath-1))))
+    (is (= (slurp "./testResources/expected/inner_indirection.clj")
+           (deep-shear 'deep.1.root/inner-indirection
+                       classpath-1))))
 
   (testing "1 level depth defn, no requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/call-fn.clj")
-            (deep-shear 'deep.1.other-ns/call-fn  "./testResources/deep/1/other_ns.clj"
+            (deep-shear 'deep.1.other-ns/call-fn
                         classpath-1))))
 
   (testing "1 level depth defn, WITH requires from the last/bottom usage"
     (is  (= (slurp "./testResources/expected/with-require.clj")
-            (deep-shear 'deep.1.root/root-to-other  "./testResources/deep/1/root.clj"
+            (deep-shear 'deep.1.root/root-to-other
                         classpath-1))))
   (testing "3 levels depth"
     (is  (= (slurp "./testResources/expected/level_3.clj")
-            (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
+            (deep-shear 'deep.2.top-level/run
                         classpath-2))))
   (testing "2 levels depth"
     (is  (= (slurp "./testResources/expected/level_2.clj")
-            (deep-shear 'deep.2.top-level/run "./testResources/deep/2/top_level.clj"
+            (deep-shear 'deep.2.top-level/run
                         classpath-2 2))))
 
   #_(testing "Big and complex Internal indirection flow"
