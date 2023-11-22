@@ -14,10 +14,10 @@
 (defn ns-declare
   ([ns] 
    (str "(ns " (name ns) ")\n"))
-  ([ns usages]
-   (if (empty? usages)
+  ([ns deps]
+   (if (empty? deps)
      (ns-declare ns)
-     (str "(ns " (name ns) "\n" (requires usages) ")\n"))))
+     (str "(ns " (name ns) "\n" (requires deps) ")\n"))))
 
 (comment
   (ns-declare 'main-ns)
