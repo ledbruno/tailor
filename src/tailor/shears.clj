@@ -63,7 +63,8 @@
 
 (defn shear-top-level
   "Returns the sheared source code of the top level form defined on the classpath
-  target-symbol : namespaced symbol that is the shear target"
+  - target-symbol : namespaced symbol that represents the top-level form to be sheared
+  - classpath : vector of files/paths source code that will be analyzed"
   [target-symbol classpath]
   (s/join (map file-shear (matching-top-level target-symbol classpath))))
 
@@ -102,18 +103,33 @@
         non-nil-matches (filter identity ns-matches)]
     non-nil-matches))
 
-(defn- external-usage
+(defn- self-dependency
   [usage]
   (not= (:from usage) (:ns usage)))
 
-(defn shear-dependency [dep-usage all-usages classpath]
-  (let [target-symbol (destination-symbol dep-usage)
-        deps (matching-usages target-symbol all-usages)
-        external-deps (filter external-usage deps)]
-    (str (helper/ns-declare (:ns dep-usage) external-deps) (shear-top-level target-symbol classpath))))
-
 (defn- deep-usages [usage classpath]
   (usages (destination-symbol usage) classpath))
+
+(defn- dependencies [symbol classpath]
+  (->> (usages symbol classpath)
+       (filter self-dependency)))
+
+(defn append-with [symbols classpath header-src]
+  (str header-src (s/join (map #(shear-top-level % classpath) symbols))))
+
+(defn- source [[namespace symbols] classpath]
+  (->> (map #(dependencies % classpath) symbols)
+       flatten
+       distinct
+       (helper/ns-declare namespace)
+       (append-with symbols classpath)))
+
+(defn- shear-ns-symbols
+  "Retuns the source code from the provided namespaces and symbols maps (ns-map) and classpath
+  e.g: ns-map -> {   my-ns    [my-ns/symbol1,my-ns/symbol2]
+                     other-ns [other-ns/symbol3]}"
+  [ns-map classpath]
+  (s/join (map #(source % classpath) ns-map)))
 
 (defn deep
   [parent-usages classpath depth]
@@ -122,13 +138,22 @@
       child-usages
       (distinct (flatten (conj (map #(deep % classpath (- depth 1)) child-usages) parent-usages))))))
 
+(defn- usages->ns-map
+  "Returns a ns-map from usages
+   ns-map -> {   my-ns    [my-ns/symbol1,my-ns/symbol2]
+                 other-ns [other-ns/symbol3]}"
+  [all-matching-usages]
+  (->> all-matching-usages
+       (group-by :ns)
+       (map (fn [[ns usages]]
+              {ns (map #(symbol (name (:ns %)) (name (:name %))) usages)}))
+       (into {})))
+
 (defn- shear
-  [var-usages target-symbol classpath]
-  (let [target-ns           (namespace target-symbol)
-        usages-src          (s/join (map #(shear-dependency % var-usages classpath) var-usages))
-        top-level-src       (str (helper/ns-declare target-ns (filter external-usage (matching-usages target-symbol var-usages)))
-                                 (shear-top-level target-symbol classpath))]
-    (str usages-src "\n" top-level-src)))
+  [all-matching-usages target-symbol classpath]
+  (str (shear-ns-symbols (usages->ns-map all-matching-usages) classpath)
+       "\n"
+       (shear-ns-symbols {(namespace target-symbol) [target-symbol]} classpath)))
 
 (defonce max-depth 10)
 (defn deep-shear
