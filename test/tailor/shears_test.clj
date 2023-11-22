@@ -153,10 +153,10 @@
             (deep-shear 'deep.2.top-level/run
                         classpath-2 2))))
 
-  #_(testing "Big and complex Internal indirection flow"
-      (is  (= (slurp "./testResources/expected/internal_redirection.clj")
-              (deep-shear 'deep.1.big-internal/starting "./testResources/deep/1/big_internal.clj"
-                          classpath-1)))))
+  (testing "Big and complex Internal indirection flow"
+    (is  (= (slurp "./testResources/expected/big_inner_redirection.clj")
+            (deep-shear 'deep.1.big-internal/starting
+                        classpath-1)))))
 
 (comment
   (require '[clojure.tools.namespace.repl :refer [refresh]])

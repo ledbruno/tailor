@@ -120,7 +120,7 @@
   (let [child-usages (map #(deep-usages % classpath) parent-usages)]
     (if (or (= 0 depth) (empty? child-usages))
       child-usages
-      (flatten (conj (map #(deep % classpath (- depth 1)) child-usages) parent-usages)))))
+      (distinct (flatten (conj (map #(deep % classpath (- depth 1)) child-usages) parent-usages))))))
 
 (defn- shear
   [var-usages target-symbol classpath]
