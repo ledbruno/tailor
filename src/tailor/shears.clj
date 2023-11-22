@@ -126,7 +126,8 @@
   [var-usages target-symbol classpath]
   (let [target-ns           (namespace target-symbol)
         usages-src          (s/join (map #(shear-dependency % var-usages classpath) var-usages))
-        top-level-src       (str (helper/ns-declare target-ns (filter external-usage (matching-usages target-symbol var-usages))) (shear-top-level target-symbol classpath))]
+        top-level-src       (str (helper/ns-declare target-ns (filter external-usage (matching-usages target-symbol var-usages)))
+                                 (shear-top-level target-symbol classpath))]
     (str usages-src "\n" top-level-src)))
 
 (defonce max-depth 10)
