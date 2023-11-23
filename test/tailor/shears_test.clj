@@ -128,7 +128,7 @@
 (deftest test-deep-shear
   (testing "Shallow defn"
     (is (= "(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
-                                                                                  classpath-1))))
+                                                                                classpath-1))))
 
   (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
     (is (= (slurp "./testResources/expected/inner_indirection.clj")
@@ -157,6 +157,10 @@
     (is  (= (slurp "./testResources/expected/big_inner_redirection.clj")
             (deep-shear 'deep.1.big-internal/starting
                         classpath-1)))))
+
+(deftest shear-real-code
+  (is (= (slurp "./testResources/expected/server.clj")
+         (deep-shear 'example.server/start ["./testResources/deep/3/server.clj"]))))
 
 (comment
   (require '[clojure.tools.namespace.repl :refer [refresh]])
