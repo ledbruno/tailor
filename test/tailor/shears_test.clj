@@ -1,6 +1,6 @@
 (ns tailor.shears-test
   (:require [clojure.test :refer [deftest is testing]]
-            [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol]]))
+            [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol shear]]))
 
 (deftest test-usage-symbol
   (is (= 'my-ns/my-fn (destination-symbol {:ns 'my-ns :name 'my-fn}))))
@@ -127,7 +127,7 @@
 
 (deftest test-deep-shear
   (testing "Shallow defn"
-    (is (= "\n(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
+    (is (= "(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
                                                                                   classpath-1))))
 
   (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
