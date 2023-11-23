@@ -7,7 +7,5 @@
 (defn call-fn [arg1]
   (println arg1)
   (map other-thing [1 2 3]))
-
-(ns deep.1.big-internal)
 (defn starting []
   (call-fn 1))

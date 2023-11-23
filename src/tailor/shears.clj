@@ -149,11 +149,11 @@
               {ns (map #(symbol (name (:ns %)) (name (:name %))) usages)}))
        (into {})))
 
-(defn- shear
+(defn shear
   [all-matching-usages target-symbol classpath]
-  (str (shear-ns-symbols (usages->ns-map all-matching-usages) classpath)
-       "\n"
-       (shear-ns-symbols {(namespace target-symbol) [target-symbol]} classpath)))
+  (-> (usages->ns-map all-matching-usages)
+      (update (symbol (namespace target-symbol)) #(conj (into [] %) target-symbol))
+      (shear-ns-symbols classpath)))
 
 (defonce max-depth 10)
 (defn deep-shear
