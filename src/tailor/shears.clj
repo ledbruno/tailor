@@ -30,7 +30,6 @@
                :skip-lint true
                :config {:analysis true}})))
 
-(filter :defmethod (:var-usages (kondo-analysis ["./testResources/deep/3/def_multi.clj"])))
 (def memoized-kondo (memoize kondo-analysis))
 
 (defn top-level
