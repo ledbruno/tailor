@@ -17,8 +17,11 @@
           var-defs))
 
 (defn matching-usages [s-var usages]
-  (filter #(and (= (symbol (namespace s-var)) (:from %))
-                (= (symbol (name s-var)) (:from-var %)))
+  (filter #(or 
+             (and (= (symbol (name s-var)) (:name %))
+                  (:defmethod %)) 
+             (and (= (symbol (namespace s-var)) (:from %))
+                  (= (symbol (name s-var)) (:from-var %))))
           usages))
 
 (defn kondo-analysis [files]
@@ -75,7 +78,7 @@
   (symbol (name (:ns usage)) (name (:name usage))))
 
 (defn- usage-info [var-usage]
-  (select-keys var-usage [:to :name :from :from-var :alias]))
+  (select-keys var-usage [:to :name :from :from-var :alias :defmethod]))
 
 ;TODO:unit test this!
 (defn ns-usage-info [ns-matches-map usage]
@@ -88,7 +91,7 @@
        :filename (:filename namespace-match)
        ;origin info
        :from (:from usage)
-       :from-var (:from-var usage)})))
+       :from-var (if (:defmethod usage) (:name usage) (:from-var usage))})))
 
 (defn usages
   "Return a list of single level/direct usages of a given var, with the agregated ns-usage-info
@@ -149,16 +152,23 @@
               {ns (map #(symbol (name (:ns %)) (name (:name %))) usages)}))
        (into {})))
 
+(defn- log [usages]
+  (println usages)
+  usages)
+
 (defn shear
   [all-matching-usages target-symbol classpath]
   (-> (usages->ns-map all-matching-usages)
+      log
       (update (symbol (namespace target-symbol)) #(conj (into [] %) target-symbol))
       (shear-ns-symbols classpath)))
 
 (defonce max-depth 10)
+
 (defn deep-shear
   ([target-symbol classpath depth]
    (-> (usages target-symbol classpath)
+       log
        (deep classpath depth)
        reverse
        (shear target-symbol classpath)))

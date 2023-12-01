@@ -1,6 +1,14 @@
 (ns tailor.shears-test
   (:require [clojure.test :refer [deftest is testing]]
-            [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol shear]]))
+            [tailor.shears :refer [symbol-matches matching-top-level shear-top-level deep-shear usages deep matching-usages destination-symbol shear]]))
+
+(deftest test-symbol-matches
+  (is (= "banana" (symbol-matches 'deep.3.def-multi/greeting
+                                  ["./testResources/deep/3/def_multi.clj"]))))
+
+(deftest test-matching-top-level
+  (is (= "banana" (matching-top-level 'deep.3.def-multi/greeting
+                                      ["./testResources/deep/3/def_multi.clj"]))))
 
 (deftest test-usage-symbol
   (is (= 'my-ns/my-fn (destination-symbol {:ns 'my-ns :name 'my-fn}))))
@@ -12,15 +20,25 @@
                                                   '({:from-var my-fn
                                                      :from other-ns}
                                                     {:from-var my-fn
-                                                     :from target-ns}))))))
+                                                     :from target-ns})))))
+  (testing "defmulti and defmethod"
+    (is (= 1 (matching-usages 'target-ns/banana
+                              '({:from-var my-fn
+                                 :from other-ns}
+                                {:name banana
+                                 :defmethod true}
+                                {:from-var my-fn
+                                 :from target-ns}))))))
 
 (deftest test-shear-top-level
   (testing "Shears a simple def top level"
     (shear-top-level 'sample/x ["./testResources/sample.clj"])
     (is (= "(def x \"banana\")\n" (shear-top-level 'sample/x ["./testResources/sample.clj"]))))
-
   (testing "Shears a simple defn top level"
-    (is (= "(defn my-fn []\n  (def x \"orange\")\n  (print \"bla\"))\n" (shear-top-level 'sample/my-fn ["./testResources/sample.clj"])))))
+    (is (= "(defn my-fn []\n  (def x \"orange\")\n  (print \"bla\"))\n" (shear-top-level 'sample/my-fn ["./testResources/sample.clj"]))))
+  (testing "Shear top level defmethod"
+    (is (= "banana" (shear-top-level 'deep.3.def-multi/greeting
+                                     ["./testResources/deep/3/def_multi.clj"])))))
 
 (def ^:private classpath-1
   ["./testResources/deep/1/root.clj"
@@ -65,6 +83,20 @@
               :filename "./testResources/deep/1/root_dependency.clj"})
            (usages 'deep.1.root/my-fn classpath-1))))
 
+  (testing "Brings defmethod"
+    (is (=  '({:ns deep.3.def-multi,
+               :name greeting,
+               :alias nil,
+               :filename "./testResources/deep/3/def_multi.clj",
+               :from deep.3.def-multi,
+               :from-var greeting}
+              {:ns deep.3.def-multi,
+               :name greeting,
+               :alias nil,
+               :filename "./testResources/deep/3/def_multi.clj",
+               :from deep.3.def-multi,
+               :from-var greeting}) (usages 'deep.3.def-multi/greeting
+                                            ["./testResources/deep/3/def_multi.clj"]))))
   (testing "Brings by namespace (handles conflicted var names betwen ns)"
     (is (= '({:alias deep-1,
               :filename "./testResources/deep/2/deep_1.clj",
@@ -128,7 +160,7 @@
 (deftest test-deep-shear
   (testing "Shallow defn"
     (is (= "(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
-                                                                                  classpath-1))))
+                                                                                classpath-1))))
 
   (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
     (is (= (slurp "./testResources/expected/inner_indirection.clj")
@@ -159,5 +191,6 @@
                         classpath-1)))))
 
 (comment
+  (deep-shear 'deep.3.def-multi/greeting ["./testResources/deep/3/def_multi.clj"])
   (require '[clojure.tools.namespace.repl :refer [refresh]])
   (refresh))
