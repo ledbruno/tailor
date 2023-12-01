@@ -11,13 +11,32 @@
   ([key-fn coll keys-to-keep]
    (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
+(defn- def-methods [target-symbol usages]
+  (filter #(and (:defmethod %)
+                (= (symbol (namespace target-symbol)) (:from %))
+                (= (symbol (name target-symbol)) (:name %)))
+          usages))
+
+(defn- fix-end-row [defmethod-usage grouped-matches]
+  (when-let [match (first (get grouped-matches (:row defmethod-usage)))]
+    (assoc match
+           :end-row
+           (:end-row defmethod-usage))))
+
+#_(fix-end-row {:end-row 999 :row 2} {1 [{:row 1 :end-row 77} {:row 1 :end-row 0}]
+                                    2 [{:row 2 :end-row 88}]})
+
+(defn- correct-end-row [defmethod-matches all-usages]
+  (let [grouped-matches (group-by :row defmethod-matches)
+        defmethod-usages (filter #(= 'defmethod (:name %)) all-usages)
+        match (map #(fix-end-row % grouped-matches) defmethod-usages)]
+    match))
+
 (defn- symbol-match [target-symbol {var-defs :var-definitions usages :var-usages}]
   (concat (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
                         (= (symbol (name target-symbol)) (:name %)))
                   var-defs)
-          (filter #(and (= (symbol (namespace target-symbol)) (:from %))
-                        (= (symbol (name target-symbol)) (:name %)))
-                  usages)))
+          (correct-end-row (def-methods target-symbol usages) usages)))
 
 (defn matching-usages [s-var usages]
   (filter #(and (= (symbol (namespace s-var)) (:from %))
@@ -30,6 +49,7 @@
                :skip-lint true
                :config {:analysis true}})))
 
+(filter #(= 'defmethod (:name %)) (:var-usages (kondo-analysis ["./testResources/deep/3/def_multi.clj"])))
 (def memoized-kondo (memoize kondo-analysis))
 
 (defn top-level

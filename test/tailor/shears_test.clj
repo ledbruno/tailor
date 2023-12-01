@@ -16,7 +16,7 @@
             :defined-by->lint-as clojure.core/defmulti,
             :end-col 30,
             :row 3}
-           {:end-row 7,
+           {:end-row 8,
             :name-end-col 20,
             :name-end-row 7,
             :name-row 7,
@@ -30,7 +30,7 @@
             :end-col 20,
             :row 7,
             :to deep.3.def-multi}
-           {:end-row 10,
+           {:end-row 11,
             :name-end-col 20,
             :name-end-row 10,
             :name-row 10,
