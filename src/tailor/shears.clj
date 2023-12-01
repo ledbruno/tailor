@@ -11,10 +11,13 @@
   ([key-fn coll keys-to-keep]
    (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
-(defn- symbol-match [target-symbol {var-defs :var-definitions}]
-  (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
-                (= (symbol (name target-symbol)) (:name %)))
-          var-defs))
+(defn- symbol-match [target-symbol {var-defs :var-definitions usages :var-usages}]
+  (concat (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
+                        (= (symbol (name target-symbol)) (:name %)))
+                  var-defs)
+          (filter #(and (= (symbol (namespace target-symbol)) (:from %))
+                        (= (symbol (name target-symbol)) (:name %)))
+                  usages)))
 
 (defn matching-usages [s-var usages]
   (filter #(and (= (symbol (namespace s-var)) (:from %))
@@ -27,6 +30,7 @@
                :skip-lint true
                :config {:analysis true}})))
 
+(filter :defmethod (:var-usages (kondo-analysis ["./testResources/deep/3/def_multi.clj"])))
 (def memoized-kondo (memoize kondo-analysis))
 
 (defn top-level
