@@ -23,9 +23,6 @@
            :end-row
            (:end-row defmethod-usage))))
 
-#_(fix-end-row {:end-row 999 :row 2} {1 [{:row 1 :end-row 77} {:row 1 :end-row 0}]
-                                    2 [{:row 2 :end-row 88}]})
-
 (defn- correct-end-row [defmethod-matches all-usages]
   (let [grouped-matches (group-by :row defmethod-matches)
         defmethod-usages (filter #(= 'defmethod (:name %)) all-usages)
@@ -49,7 +46,6 @@
                :skip-lint true
                :config {:analysis true}})))
 
-(filter #(= 'defmethod (:name %)) (:var-usages (kondo-analysis ["./testResources/deep/3/def_multi.clj"])))
 (def memoized-kondo (memoize kondo-analysis))
 
 (defn top-level
