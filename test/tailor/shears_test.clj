@@ -78,7 +78,7 @@
    "./testResources/deep/2/deep_2.clj"
    "./testResources/deep/2/deep_3.clj"])
 
-(deftest test-usages
+(deftest test-inner-usages
   (testing "Empty usages"
     (is (empty? (inner-usages 'deep.1.root-dependency/just-for-root classpath-1))))
   (testing "Some usages"

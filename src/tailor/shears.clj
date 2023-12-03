@@ -111,7 +111,8 @@
 
 (defn inner-usages
   "Return a list of single inner usages of a given var, with the agregated ns-usage-info
-  :ns :alias :filename :name :from"
+  {:ns :alias :filename :name :from}
+  An inner usage is a usage of a target symbol that is declared by one of the namespaces declared in provided namespace"
   [target-symbol classpath]
   (let [analysis        (memoized-kondo classpath)
         ns-map          (index-by :name (:namespace-definitions analysis) [:name :filename])
@@ -129,14 +130,18 @@
 (defn- deep-usages [usage classpath]
   (inner-usages (destination-symbol usage) classpath))
 
-(defn- external-usages [target-symbol classpath]
+(defn- external-usages
+  "Return a list of usages :from target symbol, excluding any clojure.core usage that will not need a (:require)"
+  [target-symbol classpath]
   (let [analysis               (memoized-kondo classpath)
         usages                 (map usage-info (:var-usages analysis))
         matches                (matching-usages target-symbol usages)
         without-clojure-core   (filter #(not= 'clojure.core (:to %)) matches)]
     (map #(assoc % :ns (:to %)) without-clojure-core)))
 
-(defn- dependencies [symbol classpath]
+(defn- dependencies
+  "Returns inner + external usages, so the (:require ) part can be properly create for inner and exernal deps"
+  [symbol classpath]
   (->> (inner-usages symbol classpath)
        (concat (external-usages symbol classpath))
        (filter self-dependency)))
