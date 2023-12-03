@@ -109,8 +109,8 @@
        :from (:from usage)
        :from-var (:from-var usage)})))
 
-(defn usages
-  "Return a list of single level/direct usages of a given var, with the agregated ns-usage-info
+(defn inner-usages
+  "Return a list of single inner usages of a given var, with the agregated ns-usage-info
   :ns :alias :filename :name :from"
   [target-symbol classpath]
   (let [analysis        (memoized-kondo classpath)
@@ -127,12 +127,20 @@
   (not= (:from usage) (:ns usage)))
 
 (defn- deep-usages [usage classpath]
-  (usages (destination-symbol usage) classpath))
+  (inner-usages (destination-symbol usage) classpath))
+
+(defn- external-usages [target-symbol classpath]
+  (let [analysis        (memoized-kondo classpath)
+        usages          (map usage-info (:var-usages analysis))
+        matches         (matching-usages target-symbol usages)]
+    (filter #(not= 'clojure.core (:to %)) matches)))
 
 (defn- dependencies [symbol classpath]
-  (->> (usages symbol classpath)
+  (->> (inner-usages symbol classpath)
+       #_(concat (external-usages symbol classpath))
        (filter self-dependency)))
 
+(dependencies 'example.server/router ["./testResources/deep/3/server.clj"])
 (defn append-with [symbols classpath header-src]
   (str header-src (s/join (map #(shear-top-level % classpath) symbols))))
 
@@ -177,7 +185,7 @@
 (defonce max-depth 10)
 (defn deep-shear
   ([target-symbol classpath depth]
-   (-> (usages target-symbol classpath)
+   (-> (inner-usages target-symbol classpath)
        (deep classpath depth)
        reverse
        (shear target-symbol classpath)))
