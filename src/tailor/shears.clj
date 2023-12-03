@@ -130,17 +130,17 @@
   (inner-usages (destination-symbol usage) classpath))
 
 (defn- external-usages [target-symbol classpath]
-  (let [analysis        (memoized-kondo classpath)
-        usages          (map usage-info (:var-usages analysis))
-        matches         (matching-usages target-symbol usages)]
-    (filter #(not= 'clojure.core (:to %)) matches)))
+  (let [analysis               (memoized-kondo classpath)
+        usages                 (map usage-info (:var-usages analysis))
+        matches                (matching-usages target-symbol usages)
+        without-clojure-core   (filter #(not= 'clojure.core (:to %)) matches)]
+    (map #(assoc % :ns (:to %)) without-clojure-core)))
 
 (defn- dependencies [symbol classpath]
   (->> (inner-usages symbol classpath)
-       #_(concat (external-usages symbol classpath))
+       (concat (external-usages symbol classpath))
        (filter self-dependency)))
 
-(dependencies 'example.server/router ["./testResources/deep/3/server.clj"])
 (defn append-with [symbols classpath header-src]
   (str header-src (s/join (map #(shear-top-level % classpath) symbols))))
 
