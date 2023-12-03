@@ -1,7 +1,50 @@
 (ns tailor.shears-test
   (:require [clojure.test :refer [deftest is testing]]
-            [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol shear]]))
+            [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol symbol-matches]]))
 
+(deftest test-symbol-matches
+  (testing "Defmulti/defmethod matches" (is (= '({:end-row 4,
+            :name-end-col 19,
+            :name-end-row 3,
+            :name-row 3,
+            :ns deep.3.def-multi,
+            :name greeting,
+            :defined-by clojure.core/defmulti,
+            :filename "./testResources/deep/3/def_multi.clj",
+            :col 1,
+            :name-col 11,
+            :defined-by->lint-as clojure.core/defmulti,
+            :end-col 30,
+            :row 3}
+           {:end-row 8,
+            :name-end-col 20,
+            :name-end-row 7,
+            :name-row 7,
+            :name greeting,
+            :defmethod true,
+            :dispatch-val-str "\"English\"",
+            :filename "./testResources/deep/3/def_multi.clj",
+            :from deep.3.def-multi,
+            :col 12,
+            :name-col 12,
+            :end-col 20,
+            :row 7,
+            :to deep.3.def-multi}
+           {:end-row 11,
+            :name-end-col 20,
+            :name-end-row 10,
+            :name-row 10,
+            :name greeting,
+            :defmethod true,
+            :dispatch-val-str "\"French\"",
+            :filename "./testResources/deep/3/def_multi.clj",
+            :from deep.3.def-multi,
+            :col 12,
+            :name-col 12,
+            :end-col 20,
+            :row 10,
+            :to deep.3.def-multi}) (symbol-matches 'deep.3.def-multi/greeting
+                                                   ["./testResources/deep/3/def_multi.clj"])))))
 (deftest test-usage-symbol
   (is (= 'my-ns/my-fn (destination-symbol {:ns 'my-ns :name 'my-fn}))))
 
@@ -152,12 +195,14 @@
     (is  (= (slurp "./testResources/expected/level_2.clj")
             (deep-shear 'deep.2.top-level/run
                         classpath-2 2))))
+  (testing "Defmethod and Defmulti"
+    (is (= (slurp "./testResources/expected/def_multi.clj") 
+           (deep-shear 'deep.3.def-multi/greeting ["./testResources/deep/3/def_multi.clj"]))))
 
   (testing "Big and complex Internal indirection flow"
     (is  (= (slurp "./testResources/expected/big_inner_redirection.clj")
             (deep-shear 'deep.1.big-internal/starting
                         classpath-1)))))
-
 (deftest shear-real-code
   (is (= (slurp "./testResources/expected/server.clj")
          (deep-shear 'example.server/start ["./testResources/deep/3/server.clj"]))))

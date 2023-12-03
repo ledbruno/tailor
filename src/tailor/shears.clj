@@ -11,10 +11,29 @@
   ([key-fn coll keys-to-keep]
    (into {} (map (juxt key-fn #(select-keys % keys-to-keep)) coll))))
 
-(defn- symbol-match [target-symbol {var-defs :var-definitions}]
-  (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
+(defn- def-methods [target-symbol usages]
+  (filter #(and (:defmethod %)
+                (= (symbol (namespace target-symbol)) (:from %))
                 (= (symbol (name target-symbol)) (:name %)))
-          var-defs))
+          usages))
+
+(defn- fix-end-row [defmethod-usage grouped-matches]
+  (when-let [match (first (get grouped-matches (:row defmethod-usage)))]
+    (assoc match
+           :end-row
+           (:end-row defmethod-usage))))
+
+(defn- correct-end-row [defmethod-matches all-usages]
+  (let [grouped-matches (group-by :row defmethod-matches)
+        defmethod-usages (filter #(= 'defmethod (:name %)) all-usages)
+        match (map #(fix-end-row % grouped-matches) defmethod-usages)]
+    match))
+
+(defn- symbol-match [target-symbol {var-defs :var-definitions usages :var-usages}]
+  (concat (filter #(and (= (symbol (namespace target-symbol)) (:ns %))
+                        (= (symbol (name target-symbol)) (:name %)))
+                  var-defs)
+          (correct-end-row (def-methods target-symbol usages) usages)))
 
 (defn matching-usages [s-var usages]
   (filter #(and (= (symbol (namespace s-var)) (:from %))
