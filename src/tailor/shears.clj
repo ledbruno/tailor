@@ -165,7 +165,7 @@
   (->> all-matching-usages
        (group-by :ns)
        (map (fn [[ns usages]]
-              {ns (map #(symbol (name (:ns %)) (name (:name %))) usages)}))
+              {ns (distinct (map #(symbol (name (:ns %)) (name (:name %))) usages))}))
        (into {})))
 
 (defn shear

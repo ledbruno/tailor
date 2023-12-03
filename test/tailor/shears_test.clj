@@ -203,6 +203,10 @@
     (is  (= (slurp "./testResources/expected/big_inner_redirection.clj")
             (deep-shear 'deep.1.big-internal/starting
                         classpath-1)))))
+(deftest shear-real-code
+  (is (= (slurp "./testResources/expected/server.clj")
+         (deep-shear 'example.server/start ["./testResources/deep/3/server.clj"]))))
+
 (comment
   (require '[clojure.tools.namespace.repl :refer [refresh]])
   (refresh))
