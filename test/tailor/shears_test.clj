@@ -3,7 +3,7 @@
             [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol symbol-matches]]))
 
 (deftest test-symbol-matches
-  (is (= '({:end-row 4,
+  (testing "Defmulti/defmethod matches" (is (= '({:end-row 4,
             :name-end-col 19,
             :name-end-row 3,
             :name-row 3,
@@ -44,7 +44,7 @@
             :end-col 20,
             :row 10,
             :to deep.3.def-multi}) (symbol-matches 'deep.3.def-multi/greeting
-                                                   ["./testResources/deep/3/def_multi.clj"]))))
+                                                   ["./testResources/deep/3/def_multi.clj"])))))
 (deftest test-usage-symbol
   (is (= 'my-ns/my-fn (destination-symbol {:ns 'my-ns :name 'my-fn}))))
 
@@ -200,9 +200,9 @@
            (deep-shear 'deep.3.def-multi/greeting ["./testResources/deep/3/def_multi.clj"]))))
 
   (testing "Big and complex Internal indirection flow"
-    (is  (= (slurp "./testResources/expected/big_inner_redirection.clj"
+    (is  (= (slurp "./testResources/expected/big_inner_redirection.clj")
             (deep-shear 'deep.1.big-internal/starting
-                        classpath-1))))))
+                        classpath-1)))))
 (comment
   (require '[clojure.tools.namespace.repl :refer [refresh]])
   (refresh))
