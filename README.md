@@ -17,7 +17,7 @@ The **Shearing** expected result is valid/evaluable clojure source code, followi
 ```
 (deep-shear 'my-ns/entrypoint-fn ["./my-project/src/"])
 ```
-Supose you have  'my-ns/entrypoint function, that calls a external lib and also a inner source function
+Supose you have ```'my-ns/entrypoint``` function, that calls a external lib and also a inner source function
 
 ```
 (ns my-ns (:require [my-inner :as inner]
