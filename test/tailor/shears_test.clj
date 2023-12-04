@@ -1,6 +1,6 @@
 (ns tailor.shears-test
   (:require [clojure.test :refer [deftest is testing]]
-            [tailor.shears :refer [shear-top-level deep-shear usages deep matching-usages destination-symbol symbol-matches]]))
+            [tailor.shears :refer [shear-top-level deep-shear inner-usages deep matching-usages destination-symbol symbol-matches]]))
 
 (deftest test-symbol-matches
   (testing "Defmulti/defmethod matches" (is (= '({:end-row 4,
@@ -78,9 +78,9 @@
    "./testResources/deep/2/deep_2.clj"
    "./testResources/deep/2/deep_3.clj"])
 
-(deftest test-usages
+(deftest test-inner-usages
   (testing "Empty usages"
-    (is (empty? (usages 'deep.1.root-dependency/just-for-root classpath-1))))
+    (is (empty? (inner-usages 'deep.1.root-dependency/just-for-root classpath-1))))
   (testing "Some usages"
     (is (= '({:name call-fn,
               :alias other-ns,
@@ -106,7 +106,7 @@
               :from-var my-fn
               :ns deep.1.root-dependency,
               :filename "./testResources/deep/1/root_dependency.clj"})
-           (usages 'deep.1.root/my-fn classpath-1))))
+           (inner-usages 'deep.1.root/my-fn classpath-1))))
 
   (testing "Brings by namespace (handles conflicted var names betwen ns)"
     (is (= '({:alias deep-1,
@@ -114,7 +114,7 @@
               :from deep.2.top-level,
               :name run,
               :from-var run
-              :ns deep.2.deep-1}) (usages 'deep.2.top-level/run
+              :ns deep.2.deep-1}) (inner-usages 'deep.2.top-level/run
                                           classpath-2)))))
 
 (deftest test-deep-usages
