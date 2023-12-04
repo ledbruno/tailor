@@ -49,7 +49,7 @@ The result of deep shear will follow ```entrypoint-fn``` path, shearing it and a
 )
 (ns my-inner)
 (defn my-fn []
-(println "zambas")
+  (println "zambas")
 )
 ```
 
