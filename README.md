@@ -38,7 +38,7 @@ Supose you have  'my-ns/entrypoint function, that calls a external lib and also 
 )
 ```
 
-The result of deep shear will follow entrypoint-fn path, shearing it and also my-fn from my-inner ns.
+The result of deep shear will follow ```entrypoint-fn``` path, shearing it and also ```'my-inner/my-fn```.
 
 ```
 (ns my-ns (:require [my-inner :as inner]))
