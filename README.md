@@ -20,10 +20,11 @@ The **Shearing** expected result is valid/evaluable clojure source code, followi
 Supose you have  'my-ns/entrypoint function, that calls a external lib and also a inner source function
 
 ```
-(ns my-ns (:require [my-inner :as inner]))
+(ns my-ns (:require [my-inner :as inner]
+                    [external.lib :as external))
 
 (defn entrypoint-fn[]
- (external-lib/call)
+ (external/call)
  (inner/my-fn)
 )
 
@@ -33,7 +34,7 @@ Supose you have  'my-ns/entrypoint function, that calls a external lib and also 
 ```
 (ns my-inner)
 (defn my-fn []
-(println "zambas")
+ (println "zambas")
 )
 ```
 
