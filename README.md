@@ -13,6 +13,46 @@ The **Shearing** expected result is valid/evaluable clojure source code, followi
 - Code from different namespaces will be declared on its specific namespace, but outputed as a single string.
 - Can be evaluated on a clean repl if only points to clojure.core and available source code (a.k.a: classpath)
 
+## How to use
+```
+(deep-shear 'my-ns/entrypoint-fn ["./my-project/src/"])
+```
+Supose you have  'my-ns/entrypoint function, that calls a external lib and also a inner source function
+
+```
+(ns my-ns (:require [my-inner :as inner]
+                    [external.lib :as external))
+
+(defn entrypoint-fn[]
+ (external/call)
+ (inner/my-fn)
+)
+
+(def used-by-other "foo")
+```
+
+```
+(ns my-inner)
+(defn my-fn []
+ (println "zambas")
+)
+```
+
+The result of deep shear will follow ```entrypoint-fn``` path, shearing it and also ```'my-inner/my-fn```.
+
+```
+(ns my-ns (:require [my-inner :as inner]))
+
+(defn entrypoint-fn[]
+ (external-lib/call)
+ (inner/my-fn)
+)
+(ns my-inner)
+(defn my-fn []
+  (println "zambas")
+)
+```
+
 ## Use cases 
 It enables other libs/engineers to build:
 - Automated refactoring tools that could help merge source code from multiple projects/modules. 
