@@ -1,5 +1,6 @@
 (ns tailor.shears-test
   (:require [clojure.test :refer [deftest is testing]]
+            [matcher-combinators.test]
             [tailor.shears :refer [shear-top-level deep-shear inner-usages deep matching-usages destination-symbol symbol-matches]]))
 
 (deftest test-symbol-matches
@@ -168,14 +169,23 @@
                    classpath-2
                    10))))))
 
+
 (deftest test-deep-shear
   (testing "Input validation"
     (is (thrown? Exception (deep-shear "not-a-symbol" classpath-1)))
-    (is (thrown? Exception (deep-shear 'deep.1.root-dependency []))))
+    (is (thrown? Exception (deep-shear 'deep.1.root-dependency [])))
+    (is (thrown-match? clojure.lang.ExceptionInfo
+           {:symbol-not-found
+             'deep.1.root-dependency/a-fn-that-does-not-exist
+             }
+           (deep-shear 
+             'deep.1.root-dependency/a-fn-that-does-not-exist
+              classpath-1))))
 
   (testing "Shallow defn"
-    (is (= "(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
-                                                                                classpath-1))))
+    (is (= "(ns deep.1.root-dependency)\n(defn just-for-root [])\n" 
+           (deep-shear 'deep.1.root-dependency/just-for-root
+                       classpath-1))))
 
   (testing "Inner indirection should not add (:requires) ##TODO: also add single ns validation"
     (is (= (slurp "./testResources/expected/inner_indirection.clj")

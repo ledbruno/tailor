@@ -71,8 +71,14 @@
   (->> (memoized-kondo classpath)
        (symbol-match target-symbol)))
 
+(defn matching[target-symbol matches]
+  (if (empty? matches)
+              (throw (ex-info "Not found!" {:symbol-not-found target-symbol }))
+              matches))
+
 (defn matching-top-level [target-symbol classpath]
   (->> (symbol-matches target-symbol classpath)
+       (matching target-symbol)
        (matching-top-level-rows (symbol (namespace target-symbol)) classpath)))
 
 (defn- cut [from to file-path]
