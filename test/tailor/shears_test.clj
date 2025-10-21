@@ -169,6 +169,10 @@
                    10))))))
 
 (deftest test-deep-shear
+  (testing "Input validation"
+    (is (thrown? Exception (deep-shear "not-a-symbol" classpath-1)))
+    (is (thrown? Exception (deep-shear 'deep.1.root-dependency []))))
+
   (testing "Shallow defn"
     (is (= "(ns deep.1.root-dependency)\n(defn just-for-root [])\n" (deep-shear 'deep.1.root-dependency/just-for-root
                                                                                 classpath-1))))
