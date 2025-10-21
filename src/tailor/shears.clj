@@ -1,7 +1,9 @@
 (ns tailor.shears
   (:require
    [clj-kondo.core :as clj-kondo]
+   [clojure.spec.alpha :as spec]
    [clojure.java.shell :as shell]
+   [clojure.java.io :as io]
    [clojure.string :as s]
    [tailor.helper :as helper]))
 
@@ -195,6 +197,12 @@
 
 (defonce max-depth 10)
 
+(defn file-exists? [path-str]
+    (.exists (io/file path-str)))
+
+(spec/def ::target-symbol symbol?)
+(spec/def ::classpath (spec/coll-of (spec/and string? file-exists?) :kind vector? :min-count 1))
+
 (defn deep-shear
   ([target-symbol classpath depth]
    (-> (inner-usages target-symbol classpath)
@@ -202,4 +210,6 @@
        reverse
        (shear target-symbol classpath)))
   ([target-symbol classpath]
+   {:pre [(spec/assert ::target-symbol target-symbol)
+          (spec/assert ::classpath classpath)]}
    (deep-shear target-symbol classpath max-depth)))

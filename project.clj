@@ -1,5 +1,5 @@
 (defproject org.clojars.ledbruno/tailor "0.1.0-SNAPSHOT"
-  :description "Helps you write code automation prompts"
+  :description "Helps you shear/cut clojure source code for automation tasks (e.g: AI prompts)"
   :url "https://github.com/ledbruno/tailor/"
   :license {:name "Apache License, Version 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
