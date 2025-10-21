@@ -174,6 +174,7 @@
   (testing "Input validation"
     (is (thrown? Exception (deep-shear "not-a-symbol" classpath-1)))
     (is (thrown? Exception (deep-shear 'deep.1.root-dependency [])))
+    (is (thrown? Exception (deep-shear 'deep.1.root-dependency ["/some/path/that/does/not/exist/"])))
     (is (thrown-match? clojure.lang.ExceptionInfo
            {:symbol-not-found
              'deep.1.root-dependency/a-fn-that-does-not-exist
